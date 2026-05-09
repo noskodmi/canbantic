@@ -21,6 +21,7 @@ contract AgentRegistry is IAgentRegistry {
     error ZeroAddress();
 
     constructor(IWorkspaceRegistry workspaceRegistry_) {
+        if (address(workspaceRegistry_) == address(0)) revert ZeroAddress();
         workspaceRegistry = workspaceRegistry_;
     }
 

@@ -215,6 +215,13 @@ contract AgentRegistryTest is TestBase {
         registry.setProfileRef(node, bytes32(uint256(1)));
     }
 
+    function test_SetProfileRef_RevertsIfNotRegistered() public {
+        bytes32 node = registry.nodeFor(ROOT_PARENT, LABEL);
+        vm.prank(alice);
+        vm.expectRevert(abi.encodeWithSelector(AgentRegistry.NotRegistered.selector, node));
+        registry.setProfileRef(node, bytes32(uint256(1)));
+    }
+
     /* ───────────── views ───────────── */
 
     function test_NodeFor_DeterministicHashing() public view {
