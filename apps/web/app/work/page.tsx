@@ -11,7 +11,6 @@
  */
 
 import Link from "next/link";
-import type { Route } from "next";
 
 import { getWork } from "../_lib/api.js";
 import { BountyCard } from "./_ui/BountyCard.js";
@@ -28,9 +27,7 @@ export default async function WorkPage({ searchParams }: WorkPageProps) {
 
   const { bounties } = await getWork(50);
   const filtered =
-    statusFilter === null
-      ? bounties
-      : bounties.filter((bounty) => bounty.status === statusFilter);
+    statusFilter === null ? bounties : bounties.filter((bounty) => bounty.status === statusFilter);
 
   return (
     <section className="flex flex-col gap-6 py-8">
@@ -52,7 +49,7 @@ export default async function WorkPage({ searchParams }: WorkPageProps) {
               : `No bounties match status “${statusFilter}”.`}
           </p>
           <Link
-            href={"/post" as Route}
+            href="/post"
             className="rounded-md bg-[var(--color-kanbantic-accent)] px-4 py-2 text-sm font-semibold text-[var(--color-kanbantic-bg)] transition-opacity hover:opacity-90"
           >
             Post a bounty →
