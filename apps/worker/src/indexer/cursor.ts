@@ -1,5 +1,8 @@
 import { applyMigrations } from "../db/migrate.js";
 import type { Env } from "../env.js";
+import { decode } from "./decode.js";
+import { handleAgentEvent } from "./handlers/agent.js";
+import { handleWorkspaceEvent } from "./handlers/workspace.js";
 import { blockNumber, fetchLogs } from "./poll.js";
 
 const ALARM_INTERVAL_MS = 5_000;
@@ -54,7 +57,33 @@ export class IndexerCursor implements DurableObject {
     const chunkBlocks = Number(this.env.INDEXER_CHUNK_BLOCKS);
     const logs = await fetchLogs(this.env.SEPOLIA_RPC, from, safeHead, chunkBlocks);
 
-    // Handler dispatch is a no-op until Tasks 5-6 land.
+    // Dispatch each decoded log. If any handler throws, abort this tick
+    // without advancing the cursor — handlers are idempotent (INSERT OR IGNORE
+    // or explicit upserts), so the next tick will safely replay the batch.
+    const ts = Math.floor(Date.now() / 1000);
+    try {
+      for (const raw of logs) {
+        const decoded = decode(raw);
+        if (!decoded) continue;
+        switch (decoded.contract) {
+          case "WorkspaceRegistry":
+            await handleWorkspaceEvent(this.env.DB, decoded, ts);
+            break;
+          case "AgentRegistry":
+            await handleAgentEvent(this.env.DB, decoded, ts);
+            break;
+          case "BountyBoard":
+          case "ReputationAttestor":
+          case "ArbiterCouncil":
+            // Wired in Task 6.
+            break;
+        }
+      }
+    } catch (err) {
+      console.error("indexer: handler error, skipping cursor advance", err);
+      await this.state.storage.setAlarm(Date.now() + ALARM_INTERVAL_MS);
+      return { from, to: safeHead, logs: 0 };
+    }
 
     await this.env.DB.prepare(
       "INSERT INTO index_cursor (chain_id, last_block, updated_at) VALUES (?, ?, strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) ON CONFLICT(chain_id) DO UPDATE SET last_block = excluded.last_block, updated_at = excluded.updated_at",
