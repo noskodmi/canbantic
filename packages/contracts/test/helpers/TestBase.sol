@@ -18,10 +18,10 @@ abstract contract TestBase is Test {
     address internal worker = makeAddr("worker");
 
     bytes32 internal constant ROOT_PARENT = bytes32(0);
-    bytes32 internal constant CANBANTIC_ETH =
+    bytes32 internal constant KANBANTIC_ETH =
         keccak256(abi.encodePacked(bytes32(0), keccak256(bytes("kanbantic.eth"))));
     bytes32 internal constant ACME_PARENT =
-        keccak256(abi.encodePacked(CANBANTIC_ETH, keccak256(bytes("acme"))));
+        keccak256(abi.encodePacked(KANBANTIC_ETH, keccak256(bytes("acme"))));
 
     function setUp() public virtual {
         vm.deal(alice, 100 ether);
