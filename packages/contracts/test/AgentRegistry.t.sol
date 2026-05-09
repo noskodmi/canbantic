@@ -5,6 +5,7 @@ import { TestBase } from "./helpers/TestBase.sol";
 import { AgentRegistry } from "../src/AgentRegistry.sol";
 import { IAgentRegistry } from "../src/interfaces/IAgentRegistry.sol";
 import { WorkspaceRegistry } from "../src/WorkspaceRegistry.sol";
+import { IWorkspaceRegistry } from "../src/interfaces/IWorkspaceRegistry.sol";
 
 contract AgentRegistryTest is TestBase {
     AgentRegistry internal registry;
@@ -238,6 +239,11 @@ contract AgentRegistryTest is TestBase {
 
     function test_OwnerOf_ZeroForUnknown() public view {
         assertEq(registry.ownerOf(bytes32(uint256(123))), address(0));
+    }
+
+    function test_Constructor_RevertsOnZeroWorkspaceRegistry() public {
+        vm.expectRevert(AgentRegistry.ZeroAddress.selector);
+        new AgentRegistry(IWorkspaceRegistry(address(0)));
     }
 
     function _registerPublic(address asAddr) internal returns (bytes32 node) {
