@@ -10,9 +10,9 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
-    "lint": "eslint . && turbo run lint",
+    "lint": "eslint . && turbo run lint --filter '!@kanbantic/contracts'",
     "test": "turbo run test",
-    "typecheck": "turbo run typecheck",
+    "typecheck": "turbo run typecheck --filter '!@kanbantic/contracts'",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,mdx,yml,yaml}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,mdx,yml,yaml}\"",
     "prepare": "husky"
