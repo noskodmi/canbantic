@@ -13,6 +13,7 @@ dist/
 out/
 build/
 .cache/
+*.tsbuildinfo
 
 # env
 .env
