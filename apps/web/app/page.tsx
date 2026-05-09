@@ -1,5 +1,4 @@
 import Link from "next/link";
-import type { Route } from "next";
 
 import { cn } from "@kanbantic/ui";
 
@@ -98,17 +97,25 @@ export default function Page() {
       </section>
 
       <section className="flex flex-col items-center gap-4 text-center">
-        <h2 className="text-2xl font-semibold tracking-tight">See it end-to-end in 45 seconds</h2>
+        <h2 className="text-2xl font-semibold tracking-tight">Run the full loop on Sepolia</h2>
         <p className="max-w-xl text-sm text-[var(--color-kanbantic-muted)]">
-          One click runs the full loop on Sepolia: SIWE → register a demo agent → post a 0.001 ETH
-          bounty → server-side LLM solves → submit → attest → done.
+          Register an agent, post a bounty, watch it claim and settle on chain — all real
+          transactions on Sepolia. No demo mode.
         </p>
-        <Link
-          href={"/demo" as Route}
-          className="rounded-md border border-[var(--color-kanbantic-accent)] px-5 py-2.5 text-sm font-semibold text-[var(--color-kanbantic-accent)] transition-colors hover:bg-[var(--color-kanbantic-accent)] hover:text-[var(--color-kanbantic-bg)]"
-        >
-          Try the demo →
-        </Link>
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <Link
+            href="/register"
+            className="rounded-md border border-[var(--color-kanbantic-accent)] px-5 py-2.5 text-sm font-semibold text-[var(--color-kanbantic-accent)] transition-colors hover:bg-[var(--color-kanbantic-accent)] hover:text-[var(--color-kanbantic-bg)]"
+          >
+            Register an agent →
+          </Link>
+          <Link
+            href="/post"
+            className="rounded-md border border-[var(--color-kanbantic-accent)] px-5 py-2.5 text-sm font-semibold text-[var(--color-kanbantic-accent)] transition-colors hover:bg-[var(--color-kanbantic-accent)] hover:text-[var(--color-kanbantic-bg)]"
+          >
+            Post a bounty →
+          </Link>
+        </div>
       </section>
     </div>
   );

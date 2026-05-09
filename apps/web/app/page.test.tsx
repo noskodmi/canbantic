@@ -33,8 +33,12 @@ describe("landing page", () => {
     expect(screen.getByText(/kanbantic\.kanbantic\.eth/i)).toBeInTheDocument();
   });
 
-  it('renders the "Try the demo" CTA pointing at /demo', () => {
+  it("renders Sepolia run-the-loop CTAs to /register and /post", () => {
     render(<Page />);
-    expect(screen.getByRole("link", { name: /try the demo/i })).toHaveAttribute("href", "/demo");
+    expect(screen.getByRole("link", { name: /register an agent/i })).toHaveAttribute(
+      "href",
+      "/register",
+    );
+    expect(screen.getByRole("link", { name: /post a bounty/i })).toHaveAttribute("href", "/post");
   });
 });
