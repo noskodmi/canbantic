@@ -63,19 +63,38 @@ scripts/        Deploy + e2e + seed
 
 ### Sepolia (chain `11155111`)
 
-| Contract             | Address                                                                                                                         |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `WorkspaceRegistry`  | [`0x78CA5187217C5f10679A71E5De73CCdFBE3fB4B6`](https://sepolia.etherscan.io/address/0x78CA5187217C5f10679A71E5De73CCdFBE3fB4B6) |
-| `AgentRegistry`      | [`0x0Ec3f4dfd9D303Fa5d834aC2ff39e534D1A2Ecf3`](https://sepolia.etherscan.io/address/0x0Ec3f4dfd9D303Fa5d834aC2ff39e534D1A2Ecf3) |
-| `BountyBoard`        | [`0xA3a694BDD6670a49a2037536675219086B8c86C9`](https://sepolia.etherscan.io/address/0xA3a694BDD6670a49a2037536675219086B8c86C9) |
-| `ReputationAttestor` | [`0x71dCD4dd457ca6BeBAB148234c944Edc93A07c56`](https://sepolia.etherscan.io/address/0x71dCD4dd457ca6BeBAB148234c944Edc93A07c56) |
-| `ArbiterCouncil`     | [`0x8B491130cc3Be0991824e4e6411B66B3066256c7`](https://sepolia.etherscan.io/address/0x8B491130cc3Be0991824e4e6411B66B3066256c7) |
+| Contract             | Address                                                                                                                         | Sourcify                                                                                                               |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `WorkspaceRegistry`  | [`0x78CA5187217C5f10679A71E5De73CCdFBE3fB4B6`](https://sepolia.etherscan.io/address/0x78CA5187217C5f10679A71E5De73CCdFBE3fB4B6) | [verified](https://repo.sourcify.dev/server/contracts/full_match/11155111/0x78CA5187217C5f10679A71E5De73CCdFBE3fB4B6/) |
+| `AgentRegistry`      | [`0x0Ec3f4dfd9D303Fa5d834aC2ff39e534D1A2Ecf3`](https://sepolia.etherscan.io/address/0x0Ec3f4dfd9D303Fa5d834aC2ff39e534D1A2Ecf3) | [verified](https://repo.sourcify.dev/server/contracts/full_match/11155111/0x0Ec3f4dfd9D303Fa5d834aC2ff39e534D1A2Ecf3/) |
+| `BountyBoard`        | [`0xA3a694BDD6670a49a2037536675219086B8c86C9`](https://sepolia.etherscan.io/address/0xA3a694BDD6670a49a2037536675219086B8c86C9) | [verified](https://repo.sourcify.dev/server/contracts/full_match/11155111/0xA3a694BDD6670a49a2037536675219086B8c86C9/) |
+| `ReputationAttestor` | [`0x71dCD4dd457ca6BeBAB148234c944Edc93A07c56`](https://sepolia.etherscan.io/address/0x71dCD4dd457ca6BeBAB148234c944Edc93A07c56) | [verified](https://repo.sourcify.dev/server/contracts/full_match/11155111/0x71dCD4dd457ca6BeBAB148234c944Edc93A07c56/) |
+| `ArbiterCouncil`     | [`0x8B491130cc3Be0991824e4e6411B66B3066256c7`](https://sepolia.etherscan.io/address/0x8B491130cc3Be0991824e4e6411B66B3066256c7) | [verified](https://repo.sourcify.dev/server/contracts/full_match/11155111/0x8B491130cc3Be0991824e4e6411B66B3066256c7/) |
 
 **ENS root:** [`kanbantic.eth`](https://app.ens.domains/kanbantic.eth?activeTab=more) — registered on Sepolia ENS to deployer `0x44C1…ddDe`, expires 2027-05-09. Resolver: PublicResolver `0x8FADE66B79cC9f707aB26799354482EB93a5B7dD`. Records set: `addr`, `text:url`, `text:description`. Namehash `0xb4c81d607382cd32c89297f9a8c9984b690260118843ad2961d043cb2ea948b7` — matches the parent we use in the WorkspaceRegistry + AgentRegistry workspace.
 
 **First agent:** `noskodmi.kanbantic.eth` registered in `AgentRegistry` (namehash `0x1d0dcce73c9a6b536d489c4516a436f387e26c5719db5e612840e472a9526676`), owner `0x44C1…ddDe`, MCP endpoint `https://kanbantic-mcp.example.com/mcp` (placeholder until Phase 2 indexer ships).
 
-Canonical addresses live at [`packages/contracts/deployments/sepolia.json`](./packages/contracts/deployments/sepolia.json). Sourcify verification + typed ABI exports land in Phase 1B.
+Canonical addresses live at [`packages/contracts/deployments/sepolia.json`](./packages/contracts/deployments/sepolia.json). Sourcify verification + typed ABI exports shipped in Phase 1B.
+
+### Use the contracts from TypeScript
+
+```ts
+import { createPublicClient, http } from "viem";
+import { sepolia } from "viem/chains";
+import { sepoliaDeployment, AgentRegistryAbi } from "@kanbantic/shared";
+
+const client = createPublicClient({ chain: sepolia, transport: http() });
+
+const node = await client.readContract({
+  address: sepoliaDeployment.contracts.AgentRegistry,
+  abi: AgentRegistryAbi,
+  functionName: "nodeFor",
+  args: [sepoliaDeployment.ens.rootNamehash, "noskodmi"],
+});
+```
+
+Re-run `pnpm --filter @kanbantic/shared extract-abis` after any contract change in `packages/contracts/`.
 
 ## Local development
 
