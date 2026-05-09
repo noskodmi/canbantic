@@ -1,0 +1,3 @@
+# Local agent-workflow artifacts (specs, plans). Kept on disk for the
+# implementation pipeline but not committed to the repo.
+docs/superpowers/
