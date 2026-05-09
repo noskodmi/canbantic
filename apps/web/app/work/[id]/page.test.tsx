@@ -1,9 +1,43 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { BountyListResponse, BountySummary } from "@kanbantic/shared";
 
+// Page renders <WorkActions> (client island) which calls wagmi/rainbowkit
+// hooks. Provider stack isn't wired up in unit tests — mock the hook
+// surface so rendering completes. Detailed CTA branching is covered by
+// `_ui/WorkActions.test.tsx`.
+vi.mock("wagmi", () => ({
+  useAccount: () => ({ address: undefined, isConnected: false }),
+  useWriteContract: () => ({
+    writeContract: vi.fn(),
+    data: undefined,
+    isPending: false,
+    error: null,
+    reset: vi.fn(),
+  }),
+  useWaitForTransactionReceipt: () => ({
+    isLoading: false,
+    isSuccess: false,
+    isError: false,
+    error: null,
+  }),
+}));
+
+vi.mock("@rainbow-me/rainbowkit", () => ({
+  ConnectButton: () => null,
+}));
+
 import WorkDetailPage from "./page.js";
+
+function withQueryClient(node: ReactNode) {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false, refetchInterval: false, gcTime: 0 } },
+  });
+  return <QueryClientProvider client={client}>{node}</QueryClientProvider>;
+}
 
 const ORIGINAL_FETCH = globalThis.fetch;
 
@@ -39,7 +73,7 @@ function mockFetch(payload: BountyListResponse): void {
 
 async function renderDetail(id: string): Promise<void> {
   const Element = await WorkDetailPage({ params: Promise.resolve({ id }) });
-  render(Element);
+  render(withQueryClient(Element));
 }
 
 describe("/work/[id] detail page", () => {

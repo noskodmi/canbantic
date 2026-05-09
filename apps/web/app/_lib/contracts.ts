@@ -1,20 +1,26 @@
 /**
  * Wallet-side contract write helpers.
  *
- * Thin wrappers around wagmi v2's `useWriteContract` for the two
+ * Thin wrappers around wagmi v2's `useWriteContract` for the three
  * Sepolia contracts the public web app writes to: `AgentRegistry`
- * (register/update agents) and `BountyBoard` (post/claim/settle
- * bounties). Each method maps directly to the on-chain function.
+ * (register/update agents), `BountyBoard` (post/claim/settle bounties),
+ * and `ReputationAttestor` (post-settlement review attestations). Each
+ * method maps directly to the on-chain function.
  *
  * Function names mirror the ABI (and the .sol files) — `register`,
- * `update`, `transferOwner`, `setProfileRef` for AgentRegistry, and
+ * `update`, `transferOwner`, `setProfileRef` for AgentRegistry;
  * `post`, `claim`, `commitClaim`, `finalizeFairClaim`, `submit`,
- * `accept`, `reject` for BountyBoard.
+ * `accept`, `reject` for BountyBoard; `attest` for ReputationAttestor.
  */
 
 "use client";
 
-import { sepoliaDeployment, AgentRegistryAbi, BountyBoardAbi } from "@kanbantic/shared";
+import {
+  sepoliaDeployment,
+  AgentRegistryAbi,
+  BountyBoardAbi,
+  ReputationAttestorAbi,
+} from "@kanbantic/shared";
 import type { Address, Hex } from "viem";
 import { useWriteContract } from "wagmi";
 
@@ -27,6 +33,7 @@ type WriteContractError = ReturnType<typeof useWriteContract>["error"];
 
 const AGENT_REGISTRY_ADDRESS: Address = sepoliaDeployment.contracts.AgentRegistry;
 const BOUNTY_BOARD_ADDRESS: Address = sepoliaDeployment.contracts.BountyBoard;
+const REPUTATION_ATTESTOR_ADDRESS: Address = sepoliaDeployment.contracts.ReputationAttestor;
 
 /**
  * Empty bytes payload. Used for ABI-required `bytes` parameters that
@@ -261,6 +268,58 @@ export function useBountyBoard(): UseBountyBoardReturn {
         address: BOUNTY_BOARD_ADDRESS,
         functionName: "reject",
         args: [bountyId, reasonRef],
+      });
+    },
+    isPending,
+    error,
+    hash: data,
+    reset,
+  };
+}
+
+export interface AttestArgs {
+  bountyId: bigint;
+  agentNode: Hex;
+  /** 1-5 inclusive — contract reverts with `InvalidScore` otherwise. */
+  score: number;
+  /** 32-byte hash of the review comment, or `0x0…0` for none. */
+  commentRef: Hex;
+}
+
+export interface UseReputationAttestorReturn {
+  attest: (args: AttestArgs) => void;
+  isPending: boolean;
+  error: WriteContractError;
+  hash: Hex | undefined;
+  reset: () => void;
+}
+
+/**
+ * `useReputationAttestor` — wraps `useWriteContract` against
+ * `ReputationAttestor` at
+ * `sepoliaDeployment.contracts.ReputationAttestor`.
+ *
+ * The contract's `attest(uint256 bountyId, bytes32 agentNode, uint8
+ * score, bytes32 commentRef)` is a plain `external` function (no
+ * EIP-712 signature) — it trusts `msg.sender == bountyBoard.posterOf
+ * (bountyId)` for authorization. The reviewer is the bounty's poster
+ * itself; no extra owner signature needs to be provided.
+ *
+ * Caller flow on the `/work/[id]` UI: poster opens the attestation
+ * modal, picks a score (1-5) and an optional comment (hashed into
+ * `commentRef`), submits `attest`, then submits `accept` on
+ * `BountyBoard` — two separate wallet confirmations.
+ */
+export function useReputationAttestor(): UseReputationAttestorReturn {
+  const { writeContract, data, isPending, error, reset } = useWriteContract();
+
+  return {
+    attest: ({ bountyId, agentNode, score, commentRef }) => {
+      writeContract({
+        abi: ReputationAttestorAbi,
+        address: REPUTATION_ATTESTOR_ADDRESS,
+        functionName: "attest",
+        args: [bountyId, agentNode, score, commentRef],
       });
     },
     isPending,

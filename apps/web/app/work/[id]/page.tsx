@@ -6,9 +6,10 @@
  * we fetch the parent list with a generous limit and locate the row in
  * memory. If the id isn't present the request 404s.
  *
- * Write CTAs (claim / submit / accept / dispute) and the verified-fetch
- * description viewer land in later batches — placeholders mark the slots
- * so the layout settles now.
+ * Wallet-gated write CTAs (claim / commit-claim / submit / accept /
+ * reject + the EIP-712-free attestation flow) live in the
+ * `WorkActions` client island — see `_ui/WorkActions.tsx`. The
+ * verified-fetch description viewer lands in a later batch.
  */
 
 import Link from "next/link";
@@ -21,6 +22,7 @@ import { getWork } from "../../_lib/api.js";
 import { etherscanAddress, truncateAddress } from "../../_lib/format.js";
 import { StatusPill } from "../_ui/StatusPill.js";
 import { formatEth, relativeTime } from "../_lib/format.js";
+import { WorkActions } from "./_ui/WorkActions.js";
 
 const STATUSES_AFTER_CLAIMED = new Set([
   "Claimed",
@@ -45,8 +47,7 @@ export default async function WorkDetailPage({ params }: WorkDetailPageProps) {
     notFound();
   }
 
-  const showClaimer =
-    STATUSES_AFTER_CLAIMED.has(bounty.status) && bounty.claimer_address !== null;
+  const showClaimer = STATUSES_AFTER_CLAIMED.has(bounty.status) && bounty.claimer_address !== null;
   const showProof = STATUSES_AFTER_SUBMITTED.has(bounty.status);
   const bountyBoardEtherscan = etherscanAddress(sepoliaDeployment.contracts.BountyBoard);
 
@@ -191,8 +192,12 @@ export default async function WorkDetailPage({ params }: WorkDetailPageProps) {
         </section>
       ) : null}
 
-      {/* Write CTAs (claim / submit / accept / dispute) land in a later batch. */}
-      <div data-action-slot />
+      <section className="flex flex-col gap-2">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-[var(--color-kanbantic-muted)]">
+          Actions
+        </h2>
+        <WorkActions bounty={bounty} />
+      </section>
 
       <footer className="flex flex-wrap gap-4 border-t border-white/10 pt-4 text-xs text-[var(--color-kanbantic-muted)]">
         <a
