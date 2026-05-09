@@ -37,7 +37,7 @@
   "migrations": [
     {
       "tag": "v1",
-      "new_classes": ["IndexerCursor"]
+      "new_sqlite_classes": ["IndexerCursor"]
     }
   ]
 }
