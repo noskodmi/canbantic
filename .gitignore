@@ -1,3 +1,40 @@
 # Local agent-workflow artifacts (specs, plans). Kept on disk for the
 # implementation pipeline but not committed to the repo.
 docs/superpowers/
+
+# deps
+node_modules/
+.pnpm-store/
+
+# build outputs
+.next/
+.turbo/
+dist/
+out/
+build/
+.cache/
+
+# env
+.env
+.env.local
+.env.*.local
+
+# foundry
+packages/contracts/cache/
+packages/contracts/out/
+packages/contracts/broadcast/
+
+# misc
+.DS_Store
+*.log
+.vercel/
+.wrangler/
+.dev.vars
+
+# editor
+.idea/
+.vscode/
+
+# coverage
+coverage/
+*.lcov
