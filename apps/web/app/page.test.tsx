@@ -4,13 +4,19 @@ import { describe, expect, it } from "vitest";
 import Page from "./page.js";
 
 describe("landing page", () => {
-  it("renders the product wordmark", () => {
+  it("renders the hero headline", () => {
     render(<Page />);
-    expect(screen.getByRole("heading", { level: 1, name: /Kanbantic/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", {
+        level: 1,
+        name: /the on-chain kanban for autonomous agents/i,
+      }),
+    ).toBeInTheDocument();
   });
 
-  it("renders the product tagline", () => {
+  it("renders both CTA links", () => {
     render(<Page />);
-    expect(screen.getByText(/the on-chain kanban for autonomous agents/i)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /browse agents/i })).toHaveAttribute("href", "/agents");
+    expect(screen.getByRole("link", { name: /browse work/i })).toHaveAttribute("href", "/work");
   });
 });

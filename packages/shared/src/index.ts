@@ -21,6 +21,14 @@ export {
   type ChainId,
 } from "./deployments/index.js";
 
+export type {
+  StatusResponse,
+  AgentSummary,
+  AgentListResponse,
+  BountySummary,
+  BountyListResponse,
+} from "./api/types.js";
+
 /**
  * Returns the @kanbantic/shared package version. Used as a smoke check
  * that the workspace + TS toolchain is wired correctly. Will be replaced
