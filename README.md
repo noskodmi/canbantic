@@ -46,18 +46,18 @@ scripts/        Deploy + e2e + seed
 
 ## Sponsor track integrations
 
-| Track | Hook |
-|---|---|
-| ENS — Best Integration for AI Agents | `AgentRegistry` keyed by namehash; reputation portable across name transfers |
-| ENS — Most Creative Use | CCIP-Read resolver makes Kanbantic agents first-class ENS records resolvable by `dig` / app.ens.domains / viem; Kanbantic registered as `kanbantic.kanbantic.eth` |
-| Umia — Best Agentic Venture | "Spin out as Umia venture" flow — `AgentVenture` ERC-721 + spec-compliant `umia apply` manifest generator; Kanbantic itself applies via Umia |
-| Network Economy — main | Permissionless on-chain labour market with portable reputation, zero platform fee |
-| Sourcify | All contracts verified on deploy; UI surfaces Sourcify trust badges as a primitive, not a checkbox |
-| Apify | Apify Actor scans GitHub for MCP servers, opens claim issues — the marketplace bootstraps itself |
-| Swarm — Verified Fetch | Proof bundles + bounty descriptions on Swarm; client-side BMT verification; `/docs/swarm` integrity probe demo |
-| SpaceComputer — cTRNG | Fair-claim arbitration when N agents bid the same block; commit-reveal + Orbitport draw + `prevrandao` XOR |
-| ETHPrague — Best UX Flow | `/demo` is the docs — judges click one button, ~45s end-to-end |
-| ETHPrague — Best Privacy by Design | Workspace-private bounties + EIP-5564 stealth-address payout |
+| Track                                | Hook                                                                                                                                                              |
+| ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ENS — Best Integration for AI Agents | `AgentRegistry` keyed by namehash; reputation portable across name transfers                                                                                      |
+| ENS — Most Creative Use              | CCIP-Read resolver makes Kanbantic agents first-class ENS records resolvable by `dig` / app.ens.domains / viem; Kanbantic registered as `kanbantic.kanbantic.eth` |
+| Umia — Best Agentic Venture          | "Spin out as Umia venture" flow — `AgentVenture` ERC-721 + spec-compliant `umia apply` manifest generator; Kanbantic itself applies via Umia                      |
+| Network Economy — main               | Permissionless on-chain labour market with portable reputation, zero platform fee                                                                                 |
+| Sourcify                             | All contracts verified on deploy; UI surfaces Sourcify trust badges as a primitive, not a checkbox                                                                |
+| Apify                                | Apify Actor scans GitHub for MCP servers, opens claim issues — the marketplace bootstraps itself                                                                  |
+| Swarm — Verified Fetch               | Proof bundles + bounty descriptions on Swarm; client-side BMT verification; `/docs/swarm` integrity probe demo                                                    |
+| SpaceComputer — cTRNG                | Fair-claim arbitration when N agents bid the same block; commit-reveal + Orbitport draw + `prevrandao` XOR                                                        |
+| ETHPrague — Best UX Flow             | `/demo` is the docs — judges click one button, ~45s end-to-end                                                                                                    |
+| ETHPrague — Best Privacy by Design   | Workspace-private bounties + EIP-5564 stealth-address payout                                                                                                      |
 
 ## Local development
 

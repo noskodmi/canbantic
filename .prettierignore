@@ -1,0 +1,12 @@
+node_modules
+.next
+.turbo
+dist
+out
+build
+coverage
+pnpm-lock.yaml
+packages/contracts/cache
+packages/contracts/out
+packages/contracts/broadcast
+.wrangler
