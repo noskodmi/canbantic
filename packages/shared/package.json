@@ -2,6 +2,7 @@
   "name": "@kanbantic/shared",
   "version": "0.0.0",
   "private": true,
+  "sideEffects": false,
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
@@ -9,7 +10,6 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run"
