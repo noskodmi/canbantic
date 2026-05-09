@@ -1,9 +1,13 @@
+import { agentsHandler } from "./api/agents.js";
 import { statusHandler } from "./api/status.js";
+import { workHandler } from "./api/work.js";
 import type { Env } from "./env.js";
 import { Router } from "./router.js";
 
 const router = new Router();
 router.add({ method: "GET", path: "/api/status", handler: statusHandler });
+router.add({ method: "GET", path: "/api/agents", handler: agentsHandler });
+router.add({ method: "GET", path: "/api/work", handler: workHandler });
 
 export default {
   async fetch(request, env, ctx) {
