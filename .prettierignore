@@ -10,3 +10,6 @@ packages/contracts/cache
 packages/contracts/out
 packages/contracts/broadcast
 .wrangler
+
+# local agent-workflow artifacts (specs, plans) — gitignored, kept on disk
+docs/superpowers
