@@ -1,4 +1,27 @@
 /**
+ * @kanbantic/shared — public surface re-exports.
+ *
+ * Phase 0: smoke `version()` only.
+ * Phase 1B: typed ABIs (5 contracts) + Sepolia deployment metadata.
+ * Phase 2+ will add zod schemas, viem clients, ENS helpers.
+ */
+
+export {
+  AgentRegistryAbi,
+  ArbiterCouncilAbi,
+  BountyBoardAbi,
+  ReputationAttestorAbi,
+  WorkspaceRegistryAbi,
+} from "./abi/index.js";
+
+export {
+  sepoliaDeployment,
+  deploymentFor,
+  type SepoliaDeployment,
+  type ChainId,
+} from "./deployments/index.js";
+
+/**
  * Returns the @kanbantic/shared package version. Used as a smoke check
  * that the workspace + TS toolchain is wired correctly. Will be replaced
  * by a real export surface (ABIs, viem clients, ENS helpers) in Phase 1+.
