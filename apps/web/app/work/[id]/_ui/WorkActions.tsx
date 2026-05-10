@@ -601,7 +601,7 @@ function SubmitProofAction({ bounty }: SubmitProofActionProps) {
           onChange={(e) => {
             setProofRef(e.target.value);
           }}
-          placeholder="0x… (32-byte Swarm hash; Phase 7 will upload for you)"
+          placeholder="0x… (32-byte Swarm BMT root)"
           autoComplete="off"
           spellCheck={false}
           className="rounded-md border border-white/10 bg-transparent px-3 py-2 font-mono text-xs focus:border-[var(--color-kanbantic-accent)] focus:outline-none"

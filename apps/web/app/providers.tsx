@@ -4,7 +4,6 @@ import { RainbowKitProvider, connectorsForWallets } from "@rainbow-me/rainbowkit
 import {
   base,
   injectedWallet,
-  metaMaskWallet,
   rainbowWallet,
   walletConnectWallet,
 } from "@rainbow-me/rainbowkit/wallets";
@@ -25,20 +24,29 @@ if (!wcProjectId || wcProjectId === "demo") {
   );
 }
 
-// Custom connector list. Coinbase Smart Wallet first because it works
-// in Safari via passkeys with no extension required — the most reliable
-// wallet path on iOS/Safari where ITP breaks WC's storage flows.
-// Injected (MetaMask) for desktop Chrome/Brave with the extension.
-// WalletConnect for mobile QR pairing.
+// Custom connector list, ordered by Safari-friendliness:
+//   1. Base Account / Coinbase Smart Wallet — passkey-native, no
+//      browser extension or WC modal required. The most reliable
+//      wallet path on Safari/iOS where ITP breaks third-party
+//      storage flows.
+//   2. injectedWallet — auto-detects MetaMask / Brave / Rabby /
+//      whatever extension the user has installed. The dedicated
+//      `metaMaskWallet` SDK is intentionally excluded because its
+//      embedded modal throws an "invalid border=0" iframe error in
+//      Safari; falling back to the injected provider works.
+//   3. WalletConnect — mobile wallet pairing via QR. Configured
+//      with `disableProviderPing` so the keepalive doesn't hang the
+//      modal under Safari ITP, and telemetry off.
+//   4. Rainbow — RainbowKit's deeplink wallet, also fine on Safari.
 const connectors = connectorsForWallets(
   [
     {
-      groupName: "Recommended for Safari",
+      groupName: "Recommended",
       wallets: [base],
     },
     {
-      groupName: "Browser",
-      wallets: [metaMaskWallet, injectedWallet],
+      groupName: "Browser extension",
+      wallets: [injectedWallet],
     },
     {
       groupName: "Mobile",
@@ -51,6 +59,13 @@ const connectors = connectorsForWallets(
     appUrl: "https://kanbantic.vercel.app",
     appIcon: "https://kanbantic.vercel.app/logo.jpg",
     projectId: wcProjectId ?? "demo",
+    walletConnectParameters: {
+      // Skip the keepalive ping that occasionally hangs in Safari
+      // when ITP blocks the third-party storage required by the
+      // WC SDK to track the relay session.
+      disableProviderPing: true,
+      telemetryEnabled: false,
+    },
   },
 );
 

@@ -121,12 +121,11 @@ export default async function WorkDetailPage({ params }: WorkDetailPageProps) {
             <p className="whitespace-pre-wrap text-[var(--color-kanbantic-fg)]/90">{description}</p>
           ) : (
             <p className="text-[var(--color-kanbantic-muted)]">
-              Description not pinned to Swarm — this bounty was posted with the legacy{" "}
+              Description not pinned to Swarm. The poster anchored only the{" "}
               <code className="rounded bg-white/5 px-1 py-0.5 font-mono text-xs">
                 keccak256(text)
               </code>{" "}
-              stub before <code className="font-mono">/api/upload</code> was wired. Newly-posted
-              tasks fetch their description here.
+              hash on chain rather than uploading the full prompt.
             </p>
           )}
           <p className="mt-3 break-all font-mono text-xs text-[var(--color-kanbantic-muted)]">

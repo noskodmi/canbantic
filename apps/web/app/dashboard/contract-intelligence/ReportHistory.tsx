@@ -67,14 +67,9 @@ export function ReportHistory() {
 
   return (
     <section className="flex flex-col gap-3">
-      <div className="flex items-baseline justify-between">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-[var(--color-kanbantic-muted)]">
-          Past reports {runs !== null ? `(${String(runs.length)})` : ""}
-        </h2>
-        <p className="text-xs text-[var(--color-kanbantic-muted)]">
-          Persisted in D1, refreshed every 10s.
-        </p>
-      </div>
+      <h2 className="text-sm font-semibold uppercase tracking-wider text-[var(--color-kanbantic-muted)]">
+        Past reports {runs !== null ? `(${String(runs.length)})` : ""}
+      </h2>
 
       {error !== null ? (
         <p className="rounded-md border border-red-500/30 bg-red-500/5 p-3 text-xs text-red-300">
