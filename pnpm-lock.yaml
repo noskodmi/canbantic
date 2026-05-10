@@ -38,6 +38,9 @@ importers:
       '@kanbantic/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@kanbantic/swarm-verified-fetch':
+        specifier: workspace:*
+        version: link:../../packages/swarm-verified-fetch
       '@kanbantic/ui':
         specifier: workspace:*
         version: link:../../packages/ui

@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@kanbantic/shared": "workspace:*",
+    "@kanbantic/swarm-verified-fetch": "workspace:*",
     "@kanbantic/ui": "workspace:*",
     "@noble/curves": "^1.9.0",
     "@noble/hashes": "^1.7.0",

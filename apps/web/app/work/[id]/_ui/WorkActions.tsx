@@ -26,9 +26,9 @@
  *       posterOf(bountyId)` — no EIP-712).
  *   2. `BountyBoard.accept(bountyId)` once the attest tx confirms.
  *
- * Reject uses a `window.confirm` guard then calls
- * `BountyBoard.reject` with an empty `reasonRef` (Phase 7 will
- * upload the reason to Swarm and pass the 32-byte hash here).
+ * Reject opens `RejectModal`, which collects an optional reason
+ * (hashed into a 32-byte `reasonRef` — Phase 7 will pin the original
+ * text to Swarm) and calls `BountyBoard.reject(bountyId, reasonRef)`.
  */
 
 import { ConnectButton } from "@rainbow-me/rainbowkit";
@@ -50,10 +50,10 @@ import { AcceptStealthHint } from "./AcceptStealthHint.js";
 import { AttestationModal } from "./AttestationModal.js";
 import type { AttestationSubmitArgs } from "./AttestationModal.js";
 import { OrbitportWaitingPanel } from "./OrbitportWaitingPanel.js";
+import { RejectModal } from "./RejectModal.js";
+import type { RejectSubmitArgs } from "./RejectModal.js";
 
 const ETHERSCAN_TX = "https://sepolia.etherscan.io/tx";
-
-const ZERO_BYTES32: Hex = `0x${"0".repeat(64)}`;
 
 const TERMINAL_STATUSES: Record<string, string> = {
   Resolved: "This bounty is resolved — payout has been released to the claimer.",
@@ -672,6 +672,7 @@ interface SettleActionProps {
 
 function SettleAction({ bounty }: SettleActionProps) {
   const [modalOpen, setModalOpen] = useState(false);
+  const [rejectOpen, setRejectOpen] = useState(false);
 
   // Look up the claimer agent so we can surface its EIP-5564 stealth
   // meta-address (if it published one) on the accept hint. Cheap shared
@@ -728,14 +729,19 @@ function SettleAction({ bounty }: SettleActionProps) {
     });
   }
 
-  function onReject() {
-    const ok = window.confirm(
-      "Reject this submission? The bounty will move to the arbiter council if one is set, " +
-        "otherwise the escrow will be refunded to you.",
-    );
-    if (!ok) return;
-    board.reject({ bountyId: BigInt(bounty.id), reasonRef: ZERO_BYTES32 });
+  function onRejectSubmit(args: RejectSubmitArgs) {
+    board.reset();
+    board.reject({ bountyId: BigInt(bounty.id), reasonRef: args.reasonRef });
   }
+
+  // Close the reject modal once the reject tx confirms.
+  useEffect(() => {
+    if (acceptReceipt.isSuccess && rejectOpen && !acceptStarted) {
+      // `acceptReceipt` watches `board.hash` — for reject it represents
+      // the reject tx confirmation (no attest happens before reject).
+      setRejectOpen(false);
+    }
+  }, [acceptReceipt.isSuccess, rejectOpen, acceptStarted]);
 
   const acceptBusy =
     attestor.isPending || attestReceipt.isLoading || board.isPending || acceptReceipt.isLoading;
@@ -778,7 +784,9 @@ function SettleAction({ bounty }: SettleActionProps) {
         </button>
         <button
           type="button"
-          onClick={onReject}
+          onClick={() => {
+            setRejectOpen(true);
+          }}
           disabled={acceptBusy || acceptDone || board.isPending}
           className={cn(
             "min-h-11 rounded-md border border-red-500/40 px-4 py-2 text-sm font-semibold text-red-300",
@@ -852,6 +860,31 @@ function SettleAction({ bounty }: SettleActionProps) {
             ) : attestor.hash !== undefined ? (
               <div className="text-xs text-[var(--color-kanbantic-muted)]">
                 Attestation tx submitted — accept will fire automatically once it confirms.
+              </div>
+            ) : null
+          }
+        />
+      ) : null}
+
+      {rejectOpen ? (
+        <RejectModal
+          bountyId={bounty.id}
+          onClose={() => {
+            if (!board.isPending && !acceptReceipt.isLoading) setRejectOpen(false);
+          }}
+          onSubmit={onRejectSubmit}
+          busy={board.isPending || acceptReceipt.isLoading}
+          statusSlot={
+            board.error !== null ? (
+              <div
+                role="alert"
+                className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-300"
+              >
+                {board.error.message}
+              </div>
+            ) : board.hash !== undefined ? (
+              <div className="text-xs text-[var(--color-kanbantic-muted)]">
+                Reject tx submitted — close once it confirms.
               </div>
             ) : null
           }

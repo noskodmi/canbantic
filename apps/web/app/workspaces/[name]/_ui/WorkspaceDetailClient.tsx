@@ -18,6 +18,8 @@ import Link from "next/link";
 import { useEffect, useId, useMemo, useState } from "react";
 import type { SyntheticEvent } from "react";
 import { isAddress, namehash, type Address, type Hex } from "viem";
+import { AdminTransferModal } from "./AdminTransferModal.js";
+import type { AdminTransferSubmitArgs } from "./AdminTransferModal.js";
 import { useAccount, useWaitForTransactionReceipt } from "wagmi";
 import { sepoliaDeployment, type BountyListResponse } from "@kanbantic/shared";
 import { cn } from "@kanbantic/ui";
@@ -228,7 +230,9 @@ function ResolvedWorkspaceDetail({ resolved }: ResolvedWorkspaceDetailProps) {
         )}
       </section>
 
-      {isConnected && isAdmin ? <TransferAdminForm wsNode={wsNode} /> : null}
+      {isConnected && isAdmin ? (
+        <TransferAdminForm wsNode={wsNode} workspaceLabel={displayName ?? wsNode} />
+      ) : null}
 
       {!isConnected ? (
         <section className="flex flex-col items-start gap-3 rounded-lg border border-white/10 bg-white/[0.02] p-4 text-sm">
@@ -476,41 +480,29 @@ function AddMemberForm({ wsNode }: AddMemberFormProps) {
 
 interface TransferAdminFormProps {
   wsNode: Hex;
+  workspaceLabel: string;
 }
 
-function TransferAdminForm({ wsNode }: TransferAdminFormProps) {
+function TransferAdminForm({ wsNode, workspaceLabel }: TransferAdminFormProps) {
   const queryClient = useQueryClient();
-  const inputId = useId();
-  const [value, setValue] = useState("");
+  const [open, setOpen] = useState(false);
   const { transferAdmin, isPending, error, hash, reset } = useWorkspaceRegistry();
   const receipt = useWaitForTransactionReceipt({ hash });
 
   useEffect(() => {
     if (receipt.isSuccess) {
-      setValue("");
+      setOpen(false);
       void queryClient.invalidateQueries({ queryKey: ["workspaces", "admin", wsNode] });
       void queryClient.invalidateQueries({ queryKey: ["workspaces", "members", wsNode] });
     }
   }, [receipt.isSuccess, queryClient, wsNode]);
 
-  const validation = useMemo<{ value: Address | null; error: string | null }>(() => {
-    const trimmed = value.trim();
-    if (!trimmed) return { value: null, error: "New admin address is required." };
-    if (!isAddress(trimmed)) return { value: null, error: "Not a valid Ethereum address." };
-    return { value: trimmed, error: null };
-  }, [value]);
-
-  function onSubmit(event: SyntheticEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (validation.value === null || isPending) return;
-    const ok = window.confirm(
-      `Transfer admin to ${truncateAddress(validation.value)}? You will lose admin rights.`,
-    );
-    if (!ok) return;
+  function onSubmit(args: AdminTransferSubmitArgs) {
     reset();
-    transferAdmin({ wsNode, newAdmin: validation.value });
+    transferAdmin({ wsNode, newAdmin: args.newAdmin });
   }
 
+  const busy = isPending || receipt.isLoading;
   const errorMessage = error?.message ?? receipt.error?.message ?? null;
 
   return (
@@ -518,61 +510,27 @@ function TransferAdminForm({ wsNode }: TransferAdminFormProps) {
       <h2 className="text-sm font-semibold uppercase tracking-wider text-[var(--color-kanbantic-muted)]">
         Transfer admin
       </h2>
-      <form
-        onSubmit={onSubmit}
-        className="flex flex-col gap-3 rounded-lg border border-red-500/20 bg-red-500/[0.03] p-4"
-      >
+      <div className="flex flex-col gap-3 rounded-lg border border-red-500/20 bg-red-500/[0.03] p-4">
         <p className="text-xs text-[var(--color-kanbantic-muted)]">
           Transfers control of this workspace to a new admin. The new admin is also added to the
           member set if they aren&apos;t already.
         </p>
-        <fieldset
-          disabled={isPending || receipt.isLoading}
-          className="flex flex-col gap-2 sm:flex-row sm:items-end"
+        <button
+          type="button"
+          onClick={() => {
+            setOpen(true);
+          }}
+          disabled={busy || receipt.isSuccess}
+          className={cn(
+            "self-start rounded-md border border-red-500/40 px-4 py-2 text-sm font-semibold text-red-300",
+            "hover:enabled:bg-red-500/10",
+            "disabled:cursor-not-allowed disabled:opacity-50",
+          )}
         >
-          <div className="flex flex-1 flex-col gap-1">
-            <label htmlFor={inputId} className="text-xs font-medium">
-              New admin address
-            </label>
-            <input
-              id={inputId}
-              type="text"
-              value={value}
-              onChange={(e) => {
-                setValue(e.target.value);
-              }}
-              placeholder="0x…"
-              autoComplete="off"
-              spellCheck={false}
-              className="rounded-md border border-white/10 bg-transparent px-3 py-2 font-mono text-xs focus:border-[var(--color-kanbantic-accent)] focus:outline-none"
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={
-              validation.value === null || isPending || receipt.isLoading || receipt.isSuccess
-            }
-            className={cn(
-              "rounded-md border border-red-500/40 px-4 py-2 text-sm font-semibold text-red-300",
-              "hover:enabled:bg-red-500/10",
-              "disabled:cursor-not-allowed disabled:opacity-50",
-            )}
-          >
-            {receipt.isSuccess
-              ? "Transferred"
-              : isPending
-                ? "Sign in wallet…"
-                : receipt.isLoading
-                  ? "Submitting…"
-                  : "Transfer admin"}
-          </button>
-        </fieldset>
+          {receipt.isSuccess ? "Transferred" : busy ? "Submitting…" : "Transfer admin…"}
+        </button>
 
-        {validation.error && value ? (
-          <p className="text-xs text-red-400">{validation.error}</p>
-        ) : null}
-
-        {errorMessage !== null ? (
+        {errorMessage !== null && !open ? (
           <div
             role="alert"
             className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-300"
@@ -591,7 +549,32 @@ function TransferAdminForm({ wsNode }: TransferAdminFormProps) {
             tx: {hash}
           </a>
         ) : null}
-      </form>
+      </div>
+
+      {open ? (
+        <AdminTransferModal
+          workspaceLabel={workspaceLabel}
+          busy={busy}
+          onSubmit={onSubmit}
+          onClose={() => {
+            if (!busy) setOpen(false);
+          }}
+          statusSlot={
+            errorMessage !== null ? (
+              <div
+                role="alert"
+                className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-300"
+              >
+                {errorMessage}
+              </div>
+            ) : hash !== undefined ? (
+              <div className="text-xs text-[var(--color-kanbantic-muted)]">
+                Transfer tx submitted — closes automatically on confirmation.
+              </div>
+            ) : null
+          }
+        />
+      ) : null}
     </section>
   );
 }
