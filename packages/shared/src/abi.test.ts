@@ -5,6 +5,7 @@ import {
   AgentVentureAbi,
   ArbiterCouncilAbi,
   BountyBoardAbi,
+  OffchainResolverAbi,
   ReputationAttestorAbi,
   WorkspaceRegistryAbi,
 } from "./abi/index.js";
@@ -126,6 +127,28 @@ describe("AgentVentureAbi", () => {
 
   it("emits AgentVentureMinted", () => {
     expect(eventNames(AgentVentureAbi)).toContain("AgentVentureMinted");
+  });
+});
+
+describe("OffchainResolverAbi", () => {
+  it("contains resolve + resolveWithProof + supportsInterface", () => {
+    const fns = functionNames(OffchainResolverAbi);
+    expect(fns).toContain("resolve");
+    expect(fns).toContain("resolveWithProof");
+    expect(fns).toContain("supportsInterface");
+    expect(fns).toContain("url");
+    expect(fns).toContain("signer");
+  });
+
+  it("declares OffchainLookup, SignatureExpired, InvalidSignature errors", () => {
+    const errors = (OffchainResolverAbi as readonly unknown[])
+      .filter((e): e is { type: string; name?: string } => typeof e === "object" && e !== null)
+      .filter((e) => e.type === "error")
+      .map((e) => e.name)
+      .filter((n): n is string => typeof n === "string");
+    expect(errors).toEqual(
+      expect.arrayContaining(["OffchainLookup", "SignatureExpired", "InvalidSignature"]),
+    );
   });
 });
 

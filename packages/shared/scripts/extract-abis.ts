@@ -28,6 +28,7 @@ const CONTRACTS = [
   "AgentVenture",
   "ArbiterCouncil",
   "BountyBoard",
+  "OffchainResolver",
   "ReputationAttestor",
   "WorkspaceRegistry",
 ] as const;

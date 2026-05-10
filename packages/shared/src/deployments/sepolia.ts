@@ -28,6 +28,12 @@ export const sepoliaDeployment = {
     // until then the address is the zero-address sentinel and the web UI
     // disables the mint CTA.
     AgentVenture: UNDEPLOYED_PLACEHOLDER,
+    // Wave 2 / Sponsor 4 (ENS). Custom CCIP-Read OffchainResolver — once
+    // deployed, the controller swaps the resolver record on `kanbantic.eth`
+    // (and a wildcard child) so external ENS clients route reads through
+    // our worker. Placeholder until then; `isOffchainResolverDeployed()`
+    // mirrors the AgentVenture pattern so consumers can gate UI / docs.
+    OffchainResolver: UNDEPLOYED_PLACEHOLDER,
   },
   ens: {
     rootName: "kanbantic.eth",

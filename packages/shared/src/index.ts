@@ -11,6 +11,7 @@ export {
   AgentVentureAbi,
   ArbiterCouncilAbi,
   BountyBoardAbi,
+  OffchainResolverAbi,
   ReputationAttestorAbi,
   WorkspaceRegistryAbi,
 } from "./abi/index.js";
@@ -18,6 +19,7 @@ export {
 export {
   sepoliaDeployment,
   deploymentFor,
+  isOffchainResolverDeployed,
   UNDEPLOYED_PLACEHOLDER,
   type SepoliaDeployment,
   type ChainId,
