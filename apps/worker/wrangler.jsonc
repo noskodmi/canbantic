@@ -17,7 +17,8 @@
   "vars": {
     "SEPOLIA_RPC": "https://ethereum-sepolia-rpc.publicnode.com",
     "SEPOLIA_CHAIN_ID": "11155111",
-    "INDEXER_CHUNK_BLOCKS": "9500"
+    "INDEXER_CHUNK_BLOCKS": "9500",
+    "X402_PAY_TO_ADDRESS": "0x000000000000000000000000000000000000bEEF"
   },
   "d1_databases": [
     {
