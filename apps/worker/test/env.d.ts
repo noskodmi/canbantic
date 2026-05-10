@@ -12,6 +12,8 @@ declare module "cloudflare:test" {
     ORBITPORT_TOKEN?: string;
     WORKER_DEPLOYER_PRIVATE_KEY?: string;
     X402_PAY_TO_ADDRESS?: string;
+    APIFY_WEBHOOK_SECRET?: string;
+    GITHUB_APP_TOKEN?: string;
   }
 }
 

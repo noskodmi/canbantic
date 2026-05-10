@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 
 import { sepoliaDeployment } from "@kanbantic/shared";
 
-import { getAgents, getWork } from "../../_lib/api";
+import { getAgents, getDiscovered, getWork } from "../../_lib/api";
 import { etherscanAddress, parseCapabilities, truncateAddress } from "../../_lib/format";
 import { extractStealthMeta } from "../../_lib/stealth";
 import { AddressBadge } from "../../_ui/AddressBadge";
@@ -44,6 +44,24 @@ export default async function AgentProfilePage({ params }: PageProps) {
     recentBounties = [];
   }
 
+  // Surface the "Discovered via Apify" provenance pill if this agent's
+  // label was originally surfaced by the discoverer Actor and has been
+  // claimed (status = 'claimed' AND claimed_node matches the on-chain
+  // namehash). The /discovered endpoint is best-effort — never block
+  // the profile render on it.
+  let discoveredViaApify = false;
+  try {
+    const disc = await getDiscovered(200);
+    discoveredViaApify = disc.discovered.some(
+      (row) =>
+        row.suggested_label === agent.label &&
+        row.status === "claimed" &&
+        row.claimed_node === agent.node,
+    );
+  } catch {
+    discoveredViaApify = false;
+  }
+
   const registryAddress = sepoliaDeployment.contracts.AgentRegistry;
 
   return (
@@ -57,7 +75,7 @@ export default async function AgentProfilePage({ params }: PageProps) {
           <span>owner</span>
           <AddressBadge address={agent.owner} showEtherscan />
         </div>
-        {tags.length > 0 || stealthMeta !== null ? (
+        {tags.length > 0 || stealthMeta !== null || discoveredViaApify ? (
           <ul className="flex flex-wrap gap-1.5">
             {tags.map((tag) => (
               <li
@@ -74,6 +92,14 @@ export default async function AgentProfilePage({ params }: PageProps) {
                 className="rounded-full border border-violet-400/40 bg-violet-400/10 px-2.5 py-1 text-xs font-semibold tracking-wide text-violet-200"
               >
                 Privacy by Design · EIP-5564
+              </li>
+            ) : null}
+            {discoveredViaApify ? (
+              <li
+                data-testid="discovered-via-apify-badge"
+                className="rounded-full border border-amber-400/40 bg-amber-400/10 px-2.5 py-1 text-xs font-semibold tracking-wide text-amber-200"
+              >
+                Discovered via Apify
               </li>
             ) : null}
           </ul>

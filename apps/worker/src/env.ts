@@ -37,4 +37,17 @@ export interface Env {
    * sentinel — production must set this via wrangler vars/secrets.
    */
   X402_PAY_TO_ADDRESS?: string;
+  /**
+   * HMAC secret shared with the Apify discoverer Actor. Inbound webhook
+   * payloads are HMAC-SHA256 signed with this key (header
+   * `x-apify-signature`). When unset, `POST /api/apify-webhook` returns
+   * 503 — discovery is opt-in per deploy.
+   */
+  APIFY_WEBHOOK_SECRET?: string;
+  /**
+   * GitHub PAT (or GitHub App installation token) the worker uses to
+   * open a "claim your label" issue on each newly-discovered repo. When
+   * unset, the webhook handler skips issue creation and logs a warning.
+   */
+  GITHUB_APP_TOKEN?: string;
 }

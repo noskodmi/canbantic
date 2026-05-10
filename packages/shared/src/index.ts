@@ -33,6 +33,8 @@ export type {
   BountyListResponse,
   OrbitportDrawSummary,
   OrbitportLastDrawResponse,
+  DiscoveredAgentSummary,
+  DiscoveredAgentsResponse,
 } from "./api/types.js";
 
 /**

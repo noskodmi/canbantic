@@ -12,6 +12,7 @@ import type {
   AgentListResponse,
   AgentSummary,
   BountyListResponse,
+  DiscoveredAgentsResponse,
   OrbitportLastDrawResponse,
 } from "@kanbantic/shared";
 
@@ -53,4 +54,8 @@ export async function getOrbitportLastDraw(): Promise<OrbitportLastDrawResponse>
   // Short revalidate — judges hitting refresh during a fair-claim
   // demo expect the latest draw within seconds.
   return getJson<OrbitportLastDrawResponse>("/api/orbitport/last-draw", { revalidate: 5 });
+}
+
+export async function getDiscovered(limit = 50): Promise<DiscoveredAgentsResponse> {
+  return getJson<DiscoveredAgentsResponse>(`/api/discovered?limit=${String(limit)}`);
 }
