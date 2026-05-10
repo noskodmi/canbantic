@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { deploymentFor, sepoliaDeployment } from "./index.js";
+import { deploymentFor, sepoliaDeployment, UNDEPLOYED_PLACEHOLDER } from "./index.js";
 
 describe("sepoliaDeployment", () => {
   it("has chainId 11155111", () => {
@@ -14,6 +14,14 @@ describe("sepoliaDeployment", () => {
     expect(c.BountyBoard).toMatch(/^0x[0-9a-fA-F]{40}$/);
     expect(c.ReputationAttestor).toMatch(/^0x[0-9a-fA-F]{40}$/);
     expect(c.ArbiterCouncil).toMatch(/^0x[0-9a-fA-F]{40}$/);
+  });
+
+  it("has an AgentVenture entry (zero-address placeholder until controller deploys it)", () => {
+    expect(sepoliaDeployment.contracts.AgentVenture).toBe(UNDEPLOYED_PLACEHOLDER);
+  });
+
+  it("UNDEPLOYED_PLACEHOLDER is the zero address", () => {
+    expect(UNDEPLOYED_PLACEHOLDER).toBe("0x0000000000000000000000000000000000000000");
   });
 
   it("pins the WorkspaceRegistry address", () => {

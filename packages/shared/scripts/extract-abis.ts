@@ -25,6 +25,7 @@ const PRETTIER_BIN = join(REPO_ROOT, "node_modules/.bin/prettier");
 
 const CONTRACTS = [
   "AgentRegistry",
+  "AgentVenture",
   "ArbiterCouncil",
   "BountyBoard",
   "ReputationAttestor",

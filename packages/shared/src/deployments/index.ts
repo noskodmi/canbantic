@@ -1,6 +1,6 @@
 import { sepoliaDeployment } from "./sepolia.js";
 
-export { sepoliaDeployment, type SepoliaDeployment } from "./sepolia.js";
+export { sepoliaDeployment, type SepoliaDeployment, UNDEPLOYED_PLACEHOLDER } from "./sepolia.js";
 
 export const DEPLOYMENTS = {
   [sepoliaDeployment.chainId]: sepoliaDeployment,

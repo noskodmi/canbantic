@@ -8,22 +8,35 @@
  * with bounty-derived stats (claimed count, settled revenue). When
  * the agent's settled revenue clears the Umia threshold, surfaces
  * the "Spin out as Umia venture" CTA from spec §6.
+ *
+ * The CTA opens a "Mint AgentVenture" modal that calls
+ * `AgentVenture.mint(agentNode, accruedRevenueRoot, swarmTokenURI)`
+ * via wagmi. After the mint receipt confirms, we decode the
+ * `AgentVentureMinted` event off the receipt logs to recover the
+ * tokenId, then surface the Umia CLI manifest with the real
+ * `--kanbantic-vid <tokenId>` arg the user can copy.
  */
 
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import Link from "next/link";
 import type { Route } from "next";
-import { useMemo, useState } from "react";
-import type { AgentSummary, BountySummary } from "@kanbantic/shared";
-import { useAccount } from "wagmi";
+import { useEffect, useMemo, useState } from "react";
+import { AgentVentureAbi, type AgentSummary, type BountySummary } from "@kanbantic/shared";
+import { decodeEventLog, type Hex } from "viem";
+import { useAccount, useWaitForTransactionReceipt } from "wagmi";
 
 import { ReputationStars } from "../../../_ui/ReputationStars.js";
 import { parseCapabilities } from "../../../_lib/format.js";
+import { useAgentVenture } from "../../../_lib/contracts.js";
 import { formatEth } from "../../../work/_lib/format.js";
 import { DashboardLayout } from "../../_ui/DashboardLayout.js";
 import { EmptyState } from "../../_ui/EmptyState.js";
 import { filterByClaimer, filterByOwner, sumSettledRewardsForAgent } from "../../_lib/filters.js";
-import { UMIA_THRESHOLD_WEI, buildUmiaCliManifest } from "../../_lib/umia.js";
+import {
+  buildUmiaCliManifest,
+  SWARM_PLACEHOLDER_URI,
+  UMIA_THRESHOLD_WEI,
+} from "../../_lib/umia.js";
 
 interface AgentDashboardClientProps {
   agents: readonly AgentSummary[];
@@ -162,13 +175,55 @@ interface UmiaSpinOutCtaProps {
   armed: boolean;
 }
 
+/**
+ * The "Spin out as Umia venture" CTA. Three-state UI:
+ *  1. closed — primary button.
+ *  2. modal-open, pre-mint — explains the AgentVenture mint, with a Mint
+ *     button that calls the contract via wagmi. Disabled (with tooltip)
+ *     when the contract is the zero-address placeholder.
+ *  3. post-mint — shows the Umia CLI manifest populated with the freshly
+ *     minted `--kanbantic-vid <tokenId>` arg + a Copy button.
+ */
 function UmiaSpinOutCta({ agent, bountiesClaimedCount, armed }: UmiaSpinOutCtaProps) {
-  const [open, setOpen] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [tokenId, setTokenId] = useState<bigint | null>(null);
   const [copied, setCopied] = useState(false);
 
+  const venture = useAgentVenture();
+  const receipt = useWaitForTransactionReceipt({ hash: venture.hash });
+
+  // Decode `AgentVentureMinted` off the confirmed receipt to recover tokenId.
+  useEffect(() => {
+    if (!receipt.isSuccess || tokenId !== null) return;
+    for (const log of receipt.data.logs) {
+      try {
+        const decoded = decodeEventLog({
+          abi: AgentVentureAbi,
+          data: log.data,
+          topics: log.topics,
+        });
+        if (decoded.eventName === "AgentVentureMinted") {
+          // viem types `args` as `unknown` for ABI-narrowed events; cast to the
+          // shape we know the contract emits.
+          const args = decoded.args as unknown as { tokenId: bigint };
+          setTokenId(args.tokenId);
+          return;
+        }
+      } catch {
+        // Not an AgentVenture log — skip silently.
+      }
+    }
+  }, [receipt.isSuccess, receipt.data, tokenId]);
+
   const manifest = useMemo(
-    () => buildUmiaCliManifest({ agent, bountiesClaimed: bountiesClaimedCount }),
-    [agent, bountiesClaimedCount],
+    () =>
+      buildUmiaCliManifest({
+        agent,
+        bountiesClaimed: bountiesClaimedCount,
+        ventureTokenId: tokenId,
+        swarmTokenURI: SWARM_PLACEHOLDER_URI,
+      }),
+    [agent, bountiesClaimedCount, tokenId],
   );
 
   if (!armed) {
@@ -179,7 +234,28 @@ function UmiaSpinOutCta({ agent, bountiesClaimedCount, armed }: UmiaSpinOutCtaPr
     );
   }
 
-  async function copy() {
+  function openModal() {
+    setModalOpen(true);
+  }
+
+  function closeModal() {
+    setModalOpen(false);
+    venture.reset();
+    setTokenId(null);
+    setCopied(false);
+  }
+
+  function handleMint() {
+    if (!venture.isDeployed) return;
+    venture.mint({
+      agentNode: agent.node as Hex,
+      // v0.1: pass zero — the on-chain contract stores it opaquely.
+      accruedRevenueRoot: "0x0000000000000000000000000000000000000000000000000000000000000000",
+      swarmTokenURI: SWARM_PLACEHOLDER_URI,
+    });
+  }
+
+  async function copyManifest() {
     try {
       await navigator.clipboard.writeText(manifest);
       setCopied(true);
@@ -200,37 +276,168 @@ function UmiaSpinOutCta({ agent, bountiesClaimedCount, armed }: UmiaSpinOutCtaPr
         </p>
         <button
           type="button"
-          onClick={() => {
-            setOpen((value) => !value);
-          }}
+          onClick={openModal}
           className="rounded-md border border-[var(--color-kanbantic-accent)]/40 bg-[var(--color-kanbantic-accent)]/10 px-3 py-1.5 text-xs font-semibold text-[var(--color-kanbantic-accent)] hover:bg-[var(--color-kanbantic-accent)]/20"
         >
-          {open ? "Hide manifest" : "Spin out as Umia venture"}
+          Spin out as Umia venture
         </button>
       </div>
 
-      {open ? (
-        <div className="flex flex-col gap-2 rounded-md border border-white/10 bg-black/30 p-3">
-          <p className="text-[11px] text-[var(--color-kanbantic-muted)]">
-            Phase 3 prints the deterministic Umia CLI manifest derived from this agent&apos;s
-            on-chain data. The <span className="font-mono">AgentVenture</span> ERC-721 mint + Swarm
-            tokenURI ship in Phase 7 — the placeholders below are populated automatically once that
-            lands.
-          </p>
-          <pre className="max-h-72 overflow-auto rounded bg-black/50 p-3 font-mono text-[11px] text-[var(--color-kanbantic-fg)]/90">
-            {manifest}
-          </pre>
+      {modalOpen ? (
+        <UmiaMintModal
+          ensName={`${agent.label}.kanbantic.eth`}
+          isDeployed={venture.isDeployed}
+          isPending={venture.isPending}
+          isConfirming={Boolean(venture.hash) && receipt.isLoading}
+          isConfirmed={receipt.isSuccess && tokenId !== null}
+          error={venture.error?.message ?? receipt.error?.message ?? null}
+          tokenId={tokenId}
+          manifest={manifest}
+          copied={copied}
+          onMint={handleMint}
+          onCopy={() => {
+            void copyManifest();
+          }}
+          onClose={closeModal}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+interface UmiaMintModalProps {
+  ensName: string;
+  isDeployed: boolean;
+  isPending: boolean;
+  isConfirming: boolean;
+  isConfirmed: boolean;
+  error: string | null;
+  tokenId: bigint | null;
+  manifest: string;
+  copied: boolean;
+  onMint: () => void;
+  onCopy: () => void;
+  onClose: () => void;
+}
+
+function UmiaMintModal({
+  ensName,
+  isDeployed,
+  isPending,
+  isConfirming,
+  isConfirmed,
+  error,
+  tokenId,
+  manifest,
+  copied,
+  onMint,
+  onCopy,
+  onClose,
+}: UmiaMintModalProps) {
+  const headlineId = `umia-mint-${ensName}`;
+  const mintDisabled = !isDeployed || isPending || isConfirming || isConfirmed;
+  const mintLabel = isConfirmed
+    ? `Minted #${tokenId?.toString() ?? "?"}`
+    : isConfirming
+      ? "Confirming…"
+      : isPending
+        ? "Confirm in wallet…"
+        : "Mint AgentVenture";
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={headlineId}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+    >
+      <div className="flex w-full max-w-lg flex-col gap-4 rounded-lg border border-white/10 bg-[var(--color-kanbantic-bg)] p-6 shadow-2xl">
+        <div className="flex items-start justify-between gap-3">
+          <h2
+            id={headlineId}
+            className="text-lg font-semibold tracking-tight text-[var(--color-kanbantic-fg)]"
+          >
+            Mint AgentVenture ERC-721 first
+          </h2>
           <button
             type="button"
-            onClick={() => {
-              void copy();
-            }}
-            className="self-start rounded-md border border-white/10 px-3 py-1 text-xs text-[var(--color-kanbantic-fg)]/80 hover:border-[var(--color-kanbantic-accent)] hover:text-[var(--color-kanbantic-accent)]"
+            onClick={onClose}
+            className="text-xs text-[var(--color-kanbantic-muted)] hover:text-[var(--color-kanbantic-fg)]"
+            aria-label="Close"
           >
-            {copied ? "Copied!" : "Copy CLI command"}
+            ✕
           </button>
         </div>
-      ) : null}
+
+        <p className="text-xs text-[var(--color-kanbantic-muted)]">
+          Spinning <span className="font-mono">{ensName}</span> out as a Umia venture mints a{" "}
+          <span className="font-mono">Kanbantic Agent Venture</span> (KAV) ERC-721. The token wraps
+          the agent&apos;s namehash plus a placeholder Swarm tokenURI; the Umia CLI references it
+          via <span className="font-mono">--kanbantic-vid &lt;tokenId&gt;</span>.
+        </p>
+
+        {!isDeployed ? (
+          <p
+            role="status"
+            title="Contract not yet deployed to Sepolia — coming in next deploy"
+            className="rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200"
+          >
+            Contract not yet deployed to Sepolia — coming in next deploy. The mint button is
+            disabled until the controller publishes the AgentVenture address.
+          </p>
+        ) : null}
+
+        {error ? (
+          <p
+            role="alert"
+            className="rounded-md border border-red-500/30 bg-red-500/10 p-3 font-mono text-[11px] text-red-300"
+          >
+            {error}
+          </p>
+        ) : null}
+
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={onMint}
+            disabled={mintDisabled}
+            title={
+              !isDeployed
+                ? "Contract not yet deployed to Sepolia — coming in next deploy"
+                : undefined
+            }
+            className="rounded-md bg-[var(--color-kanbantic-accent)] px-4 py-2 text-sm font-semibold text-[var(--color-kanbantic-bg)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {mintLabel}
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-md border border-white/10 px-4 py-2 text-sm text-[var(--color-kanbantic-fg)]/80 hover:border-[var(--color-kanbantic-accent)] hover:text-[var(--color-kanbantic-accent)]"
+          >
+            {isConfirmed ? "Done" : "Cancel"}
+          </button>
+        </div>
+
+        {isConfirmed && tokenId !== null ? (
+          <div className="flex flex-col gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/5 p-3">
+            <p className="text-[11px] text-emerald-300">
+              AgentVenture #{tokenId.toString()} minted. Copy the manifest below into your terminal
+              to apply for Umia funding.
+            </p>
+            <pre className="max-h-72 overflow-auto rounded bg-black/50 p-3 font-mono text-[11px] text-[var(--color-kanbantic-fg)]/90">
+              {manifest}
+            </pre>
+            <button
+              type="button"
+              onClick={onCopy}
+              className="self-start rounded-md border border-white/10 px-3 py-1 text-xs text-[var(--color-kanbantic-fg)]/80 hover:border-[var(--color-kanbantic-accent)] hover:text-[var(--color-kanbantic-accent)]"
+            >
+              {copied ? "Copied!" : "Copy CLI command"}
+            </button>
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }

@@ -18,8 +18,10 @@
 import {
   sepoliaDeployment,
   AgentRegistryAbi,
+  AgentVentureAbi,
   BountyBoardAbi,
   ReputationAttestorAbi,
+  UNDEPLOYED_PLACEHOLDER,
   WorkspaceRegistryAbi,
 } from "@kanbantic/shared";
 import type { Address, Hex } from "viem";
@@ -33,9 +35,16 @@ import { useWriteContract } from "wagmi";
 type WriteContractError = ReturnType<typeof useWriteContract>["error"];
 
 const AGENT_REGISTRY_ADDRESS: Address = sepoliaDeployment.contracts.AgentRegistry;
+const AGENT_VENTURE_ADDRESS: Address = sepoliaDeployment.contracts.AgentVenture;
 const BOUNTY_BOARD_ADDRESS: Address = sepoliaDeployment.contracts.BountyBoard;
 const REPUTATION_ATTESTOR_ADDRESS: Address = sepoliaDeployment.contracts.ReputationAttestor;
 const WORKSPACE_REGISTRY_ADDRESS: Address = sepoliaDeployment.contracts.WorkspaceRegistry;
+
+/**
+ * `true` once the controller deploys `AgentVenture` to Sepolia and replaces
+ * the zero-address placeholder. Web CTAs check this before allowing a mint.
+ */
+export const isAgentVentureDeployed: boolean = AGENT_VENTURE_ADDRESS !== UNDEPLOYED_PLACEHOLDER;
 
 /**
  * Empty bytes payload. Used for ABI-required `bytes` parameters that
@@ -421,6 +430,68 @@ export function useWorkspaceRegistry(): UseWorkspaceRegistryReturn {
         args: [wsNode, newAdmin],
       });
     },
+    isPending,
+    error,
+    hash: data,
+    reset,
+  };
+}
+
+export interface MintAgentVentureArgs {
+  /** AgentRegistry namehash being wrapped. */
+  agentNode: Hex;
+  /**
+   * Caller-supplied 32-byte commitment to the agent's settled-revenue ledger
+   * (merkle root or similar). v0.1 stores it opaquely; v0.2 will recompute it
+   * on-chain. Pass `0x0…0` for the v0.1 spin-out flow.
+   */
+  accruedRevenueRoot: Hex;
+  /** Swarm URI pinned as the token's metadata URI. */
+  swarmTokenURI: string;
+}
+
+export interface UseAgentVentureReturn {
+  mint: (args: MintAgentVentureArgs) => void;
+  /** Live Sepolia address (or zero-address placeholder pre-deploy). */
+  address: Address;
+  /** `false` while AgentVenture remains the zero-address placeholder. */
+  isDeployed: boolean;
+  isPending: boolean;
+  error: WriteContractError;
+  hash: Hex | undefined;
+  reset: () => void;
+}
+
+/**
+ * `useAgentVenture` — wraps `useWriteContract` against the AgentVenture
+ * ERC-721 at `sepoliaDeployment.contracts.AgentVenture`.
+ *
+ * Pre-deploy the contract address is the zero-address sentinel. Callers
+ * should check `isDeployed` before enabling a mint CTA — calling `mint`
+ * against the zero address would revert on Sepolia and confuse users.
+ *
+ * Mint args mirror the on-chain function:
+ *   `mint(bytes32 agentNode, bytes32 accruedRevenueRoot, string swarmTokenURI)`
+ *
+ * To resolve the assigned tokenId, pair this hook with
+ * `useWaitForTransactionReceipt({ hash })` and parse the `AgentVentureMinted`
+ * event off the receipt logs (see `AgentDashboardClient` for the canonical
+ * usage).
+ */
+export function useAgentVenture(): UseAgentVentureReturn {
+  const { writeContract, data, isPending, error, reset } = useWriteContract();
+
+  return {
+    mint: ({ agentNode, accruedRevenueRoot, swarmTokenURI }) => {
+      writeContract({
+        abi: AgentVentureAbi,
+        address: AGENT_VENTURE_ADDRESS,
+        functionName: "mint",
+        args: [agentNode, accruedRevenueRoot, swarmTokenURI],
+      });
+    },
+    address: AGENT_VENTURE_ADDRESS,
+    isDeployed: isAgentVentureDeployed,
     isPending,
     error,
     hash: data,
