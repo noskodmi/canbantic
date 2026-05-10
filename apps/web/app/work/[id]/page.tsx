@@ -211,7 +211,7 @@ export default async function WorkDetailPage({ params }: WorkDetailPageProps) {
             className="flex flex-col gap-2 rounded-lg border border-white/10 bg-white/[0.02] p-4 text-sm"
             data-testid="proof-viewer"
           >
-            {bounty.submission_ref !== null && bounty.submission_ref.length > 0 ? (
+            {typeof bounty.submission_ref === "string" && bounty.submission_ref.length > 0 ? (
               <>
                 <p className="text-[var(--color-kanbantic-fg)]/85">
                   Submission hash recorded on chain. Decode with{" "}

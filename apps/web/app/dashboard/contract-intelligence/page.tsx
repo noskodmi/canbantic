@@ -18,6 +18,7 @@
 import { sepoliaDeployment } from "@kanbantic/shared";
 
 import { ContractIntelligenceForm } from "./ContractIntelligenceForm.js";
+import { ReportHistory } from "./ReportHistory.js";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +41,8 @@ export default function ContractIntelligenceDashboardPage() {
       </header>
 
       <ContractIntelligenceForm sampleContracts={sampleContracts} />
+
+      <ReportHistory />
     </section>
   );
 }

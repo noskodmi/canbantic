@@ -1,6 +1,7 @@
 import type { DiscoveredAgentsResponse } from "@kanbantic/shared";
 
 import { getDiscovered } from "../_lib/api";
+import { SuggestForm } from "./SuggestForm.js";
 
 export const revalidate = 30;
 
@@ -29,6 +30,13 @@ export default async function DiscoveredPage() {
           — the chain is the source of truth.
         </p>
       </header>
+
+      <section className="flex flex-col gap-3">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-[var(--color-kanbantic-muted)]">
+          Suggest your repo
+        </h2>
+        <SuggestForm />
+      </section>
 
       {fetchError ? (
         <EmptyState

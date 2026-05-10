@@ -5,8 +5,12 @@ import { agentRunHandler } from "./api/agent-run.js";
 import { agentsHandler } from "./api/agents.js";
 import { apifyWebhookHandler } from "./api/apify-webhook.js";
 import { ccipReadHandler } from "./api/ccip-read.js";
-import { contractIntelligenceHandler } from "./api/contract-intelligence.js";
-import { discoveredHandler } from "./api/discovered.js";
+import {
+  contractIntelligenceHandler,
+  contractIntelligenceGetHandler,
+  contractIntelligenceListHandler,
+} from "./api/contract-intelligence.js";
+import { discoveredHandler, discoveredSuggestHandler } from "./api/discovered.js";
 import { mcpHandler } from "./api/mcp.js";
 import { orbitportLastDrawHandler, orbitportLiveDrawHandler } from "./api/orbitport.js";
 import { refreshHandler } from "./api/refresh.js";
@@ -61,6 +65,11 @@ router.add({ method: "GET", path: "/api/agents/:node", handler: agentDetailHandl
 router.add({ method: "GET", path: "/api/work", handler: workHandler });
 router.add({ method: "GET", path: "/api/work/:id", handler: workDetailHandler });
 router.add({ method: "GET", path: "/api/discovered", handler: discoveredHandler });
+router.add({
+  method: "POST",
+  path: "/api/discovered/suggest",
+  handler: discoveredSuggestHandler,
+});
 router.add({ method: "POST", path: "/api/apify-webhook", handler: apifyWebhookHandler });
 router.add({
   method: "GET",
@@ -77,6 +86,16 @@ router.add({
   method: "POST",
   path: "/api/contract-intelligence/run",
   handler: paidContractIntelligenceHandler,
+});
+router.add({
+  method: "GET",
+  path: "/api/contract-intelligence/runs",
+  handler: contractIntelligenceListHandler,
+});
+router.add({
+  method: "GET",
+  path: "/api/contract-intelligence/runs/:id",
+  handler: contractIntelligenceGetHandler,
 });
 // EIP-3668 CCIP-Read gateway. URL template `{sender}/{data}.json` is the
 // pattern OffchainResolver pins at deploy time. Both GET (path-encoded)

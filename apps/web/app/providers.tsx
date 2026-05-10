@@ -54,10 +54,24 @@ const connectors = connectorsForWallets(
   },
 );
 
+// Build a Sepolia transport that prefers the Alchemy RPC when an
+// `NEXT_PUBLIC_ALCHEMY_API_KEY` is present, then a custom URL via
+// `NEXT_PUBLIC_SEPOLIA_RPC_URL`, then the chain's default public RPC
+// (publicnode). Public RPCs rate-limit aggressively and have lossy
+// log support, so any real workflow should use the Alchemy path.
+const alchemyKey = process.env["NEXT_PUBLIC_ALCHEMY_API_KEY"];
+const customRpc = process.env["NEXT_PUBLIC_SEPOLIA_RPC_URL"];
+const sepoliaRpcUrl =
+  alchemyKey !== undefined && alchemyKey.length > 0
+    ? `https://eth-sepolia.g.alchemy.com/v2/${alchemyKey}`
+    : customRpc !== undefined && customRpc.length > 0
+      ? customRpc
+      : undefined;
+
 const wagmiConfig = createConfig({
   connectors,
   chains: [sepolia],
-  transports: { [sepolia.id]: http() },
+  transports: { [sepolia.id]: http(sepoliaRpcUrl) },
   ssr: true,
 });
 

@@ -15,7 +15,11 @@
     }
   ],
   "vars": {
-    "SEPOLIA_RPC": "https://ethereum-sepolia-rpc.publicnode.com",
+    // SEPOLIA_RPC is provisioned via `wrangler secret put SEPOLIA_RPC`
+    // pointing at the deployer's Alchemy endpoint — public RPCs
+    // rate-limit aggressively and trim historical logs which breaks
+    // the indexer backfill. Vars stay here only for non-sensitive
+    // tunables.
     "SEPOLIA_CHAIN_ID": "11155111",
     "INDEXER_CHUNK_BLOCKS": "9500",
     // SpaceComputer Orbitport — live cTRNG endpoint. The OAuth client-

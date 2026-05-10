@@ -19,6 +19,7 @@
 
 import { lookup, type SourcifyMatch } from "@kanbantic/sourcify-client";
 
+import { applyMigrations } from "../db/migrate.js";
 import type { Env } from "../env.js";
 
 const SEPOLIA_CHAIN_ID = 11155111;
@@ -269,13 +270,106 @@ export async function contractIntelligenceHandler(request: Request, env: Env): P
     report = buildStubReport(taskKind, address, match);
   }
 
+  const model = llmStatus === "openrouter" ? (env.OPENROUTER_MODEL ?? DEFAULT_MODEL) : null;
+  const ts = Math.floor(Date.now() / 1000);
+
+  // Persist the resolved report so the UI can show a clickable history
+  // and individual reports survive a page refresh. We persist on every
+  // verified resolution (audit + explain) regardless of LLM status —
+  // even a stub report is useful evidence the analyzer ran.
+  let runId: number | null = null;
+  try {
+    await applyMigrations(env.DB);
+    const insert = await env.DB.prepare(
+      `INSERT INTO contract_intel_runs
+         (address, kind, sourcify_match, report, llm, model, ts)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    )
+      .bind(address.toLowerCase(), taskKind, match.match, report, llmStatus, model, ts)
+      .run();
+    runId = typeof insert.meta.last_row_id === "number" ? insert.meta.last_row_id : null;
+  } catch (err) {
+    // Persistence is best-effort — we still serve the report on any
+    // D1 hiccup so the user-facing call never fails on a write error.
+    console.error("contract-intelligence: failed to persist run", err);
+  }
+
   return Response.json({
+    id: runId,
     kind: taskKind,
     address,
     sourcifyMatch: match.match,
     report,
     llm: llmStatus,
-    model: llmStatus === "openrouter" ? (env.OPENROUTER_MODEL ?? DEFAULT_MODEL) : null,
+    model,
     sourcifyUrl: `https://sourcify.dev/lookup/${address}`,
+    ts,
   });
+}
+
+/**
+ * GET /api/contract-intelligence/runs
+ *
+ * Returns the most recent N persisted reports, newest first. The web
+ * Contract Intelligence page renders this as a clickable list so a
+ * single user can browse their history (and judges can see what's
+ * been analyzed) without re-running the LLM.
+ */
+export async function contractIntelligenceListHandler(
+  request: Request,
+  env: Env,
+): Promise<Response> {
+  await applyMigrations(env.DB);
+
+  const url = new URL(request.url);
+  const limitParam = url.searchParams.get("limit");
+  let limit = 50;
+  if (limitParam !== null) {
+    const parsed = Number.parseInt(limitParam, 10);
+    if (Number.isFinite(parsed) && parsed > 0 && parsed <= 200) limit = parsed;
+  }
+
+  const result = await env.DB.prepare(
+    `SELECT id, address, kind, sourcify_match, llm, model, ts,
+            substr(report, 1, 200) AS report_excerpt
+       FROM contract_intel_runs
+      ORDER BY id DESC
+      LIMIT ?`,
+  )
+    .bind(limit)
+    .all();
+
+  return Response.json({ runs: result.results, limit });
+}
+
+/**
+ * GET /api/contract-intelligence/runs/:id
+ *
+ * Returns the full row for one persisted report.
+ */
+export async function contractIntelligenceGetHandler(
+  request: Request,
+  env: Env,
+  _ctx: ExecutionContext,
+  routeCtx: { params: Record<string, string> },
+): Promise<Response> {
+  await applyMigrations(env.DB);
+
+  const idRaw = routeCtx.params["id"];
+  const id = idRaw !== undefined ? Number.parseInt(idRaw, 10) : Number.NaN;
+  if (!Number.isFinite(id) || id <= 0) {
+    return Response.json({ error: "invalid_id" }, { status: 400 });
+  }
+
+  const row = await env.DB.prepare(
+    `SELECT id, address, kind, sourcify_match, report, llm, model, ts
+       FROM contract_intel_runs
+      WHERE id = ?
+      LIMIT 1`,
+  )
+    .bind(id)
+    .first();
+
+  if (!row) return Response.json({ error: "not_found" }, { status: 404 });
+  return Response.json(row);
 }
