@@ -17,11 +17,31 @@ import { notFound } from "next/navigation";
 
 import { sepoliaDeployment } from "@kanbantic/shared";
 
-import { getWorkDetail } from "../../_lib/api.js";
+import { API_BASE, getWorkDetail } from "../../_lib/api.js";
 import { etherscanAddress, truncateAddress } from "../../_lib/format.js";
 import { StatusPill } from "../_ui/StatusPill.js";
 import { formatEth, relativeTime } from "../_lib/format.js";
 import { WorkActions } from "./_ui/WorkActions.js";
+
+/**
+ * Fetch the description payload for a bounty's Swarm BMT root via the
+ * worker's /api/swarm/:ref endpoint. Returns the decoded text, or null
+ * if the ref isn't pinned (typical for legacy bounties posted before
+ * the /api/upload integration wired up).
+ */
+async function fetchDescription(ref: string): Promise<string | null> {
+  if (!/^0x[0-9a-fA-F]{64}$/.test(ref)) return null;
+  try {
+    const res = await fetch(`${API_BASE}/api/swarm/${ref}`, {
+      next: { revalidate: 60 },
+    });
+    if (!res.ok) return null;
+    const text = await res.text();
+    return text.length === 0 ? null : text;
+  } catch {
+    return null;
+  }
+}
 
 const STATUSES_AFTER_CLAIMED = new Set([
   "Claimed",
@@ -48,6 +68,7 @@ export default async function WorkDetailPage({ params }: WorkDetailPageProps) {
 
   const showClaimer = STATUSES_AFTER_CLAIMED.has(bounty.status) && bounty.claimer_address !== null;
   const showProof = STATUSES_AFTER_SUBMITTED.has(bounty.status);
+  const description = await fetchDescription(bounty.description_ref);
   const bountyBoardEtherscan = etherscanAddress(sepoliaDeployment.contracts.BountyBoard);
   // Genesis row of the timeline always exists for an indexed bounty
   // (`BountyPosted` → "Open"), so we render the full server-side
@@ -96,14 +117,19 @@ export default async function WorkDetailPage({ params }: WorkDetailPageProps) {
           Description
         </h2>
         <div className="rounded-lg border border-white/10 bg-white/[0.02] p-4 text-sm">
-          <p className="text-[var(--color-kanbantic-fg)]/85">
-            Description fetched from Swarm — verified-fetch viewer lands when{" "}
-            <code className="rounded bg-white/5 px-1 py-0.5 font-mono text-xs">
-              @kanbantic/swarm-verified-fetch
-            </code>{" "}
-            is published.
-          </p>
-          <p className="mt-2 break-all font-mono text-xs text-[var(--color-kanbantic-muted)]">
+          {description !== null ? (
+            <p className="whitespace-pre-wrap text-[var(--color-kanbantic-fg)]/90">{description}</p>
+          ) : (
+            <p className="text-[var(--color-kanbantic-muted)]">
+              Description not pinned to Swarm — this bounty was posted with the legacy{" "}
+              <code className="rounded bg-white/5 px-1 py-0.5 font-mono text-xs">
+                keccak256(text)
+              </code>{" "}
+              stub before <code className="font-mono">/api/upload</code> was wired. Newly-posted
+              tasks fetch their description here.
+            </p>
+          )}
+          <p className="mt-3 break-all font-mono text-xs text-[var(--color-kanbantic-muted)]">
             ref: {bounty.description_ref}
           </p>
         </div>
