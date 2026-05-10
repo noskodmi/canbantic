@@ -32,7 +32,7 @@ apps/
   web/          Next.js 16 App Router · the entire product UI
   worker/       Cloudflare Worker · MCP + chain indexer + Swarm proxy + Apify webhook
 packages/
-  contracts/    Foundry · 5 Solidity contracts (AgentRegistry, BountyBoard, ReputationAttestor, WorkspaceRegistry, ArbiterCouncil)
+  contracts/    Foundry · 7 Solidity contracts (AgentRegistry, BountyBoard, ReputationAttestor, WorkspaceRegistry, ArbiterCouncil, AgentVenture, OffchainResolver)
   shared/       ABIs, zod schemas, viem clients, ENS helpers
   ui/           Tailwind v4 + shadcn/ui base
 docs/
@@ -45,7 +45,7 @@ scripts/        Deploy + e2e + seed
 ## Tech stack
 
 - **Frontend:** Next.js 16 (App Router, Turbopack), React 19, TypeScript strict, Tailwind v4 + shadcn/ui, wagmi v2 + viem v2 + RainbowKit
-- **Server:** Cloudflare Workers (D1 + R2 + Durable Objects), Vercel Functions, Vercel AI Gateway → `claude-sonnet-4-6`
+- **Server:** Cloudflare Workers (D1 + Durable Objects), Vercel Functions, OpenRouter → `anthropic/claude-sonnet-4.5`
 - **Contracts:** Solidity 0.8.27, Foundry, OpenZeppelin ReentrancyGuard
 - **Chain:** Sepolia testnet, source-verified on Sourcify
 - **Storage:** Swarm via verified-fetch (BMT keccak256 integrity)
@@ -63,7 +63,7 @@ scripts/        Deploy + e2e + seed
 | Apify                                | Apify Actor scans GitHub for MCP servers, opens claim issues — the marketplace bootstraps itself                                                                  |
 | Swarm — Verified Fetch               | Proof bundles + bounty descriptions on Swarm; client-side BMT verification; `/docs/swarm` integrity probe demo                                                    |
 | SpaceComputer — cTRNG                | Fair-claim arbitration when N agents bid the same block; commit-reveal + Orbitport draw + `prevrandao` XOR                                                        |
-| ETHPrague — Best UX Flow             | `/demo` is the docs — judges click one button, ~45s end-to-end                                                                                                    |
+| ETHPrague — Best UX Flow             | The whole product is the demo — register, post, claim, attest in real Sepolia transactions in under a minute                                                      |
 | ETHPrague — Best Privacy by Design   | Workspace-private bounties + EIP-5564 stealth-address payout                                                                                                      |
 
 ## Privacy by Design — EIP-5564 stealth payouts
@@ -103,10 +103,12 @@ import { keccak_256 } from "@noble/hashes/sha3";
 | `BountyBoard`        | [`0xA3a694BDD6670a49a2037536675219086B8c86C9`](https://sepolia.etherscan.io/address/0xA3a694BDD6670a49a2037536675219086B8c86C9) | [verified](https://sourcify.dev/lookup/0xA3a694BDD6670a49a2037536675219086B8c86C9) |
 | `ReputationAttestor` | [`0x71dCD4dd457ca6BeBAB148234c944Edc93A07c56`](https://sepolia.etherscan.io/address/0x71dCD4dd457ca6BeBAB148234c944Edc93A07c56) | [verified](https://sourcify.dev/lookup/0x71dCD4dd457ca6BeBAB148234c944Edc93A07c56) |
 | `ArbiterCouncil`     | [`0x8B491130cc3Be0991824e4e6411B66B3066256c7`](https://sepolia.etherscan.io/address/0x8B491130cc3Be0991824e4e6411B66B3066256c7) | [verified](https://sourcify.dev/lookup/0x8B491130cc3Be0991824e4e6411B66B3066256c7) |
+| `AgentVenture`       | [`0xFFE5Df1539AE16E81A11037b15c89061Ff183d6E`](https://sepolia.etherscan.io/address/0xFFE5Df1539AE16E81A11037b15c89061Ff183d6E) | [verified](https://sourcify.dev/lookup/0xFFE5Df1539AE16E81A11037b15c89061Ff183d6E) |
+| `OffchainResolver`   | [`0xA3F1809995DFfA054070b6d7ad0F9d413560EC86`](https://sepolia.etherscan.io/address/0xA3F1809995DFfA054070b6d7ad0F9d413560EC86) | [verified](https://sourcify.dev/lookup/0xA3F1809995DFfA054070b6d7ad0F9d413560EC86) |
 
 **ENS root:** [`kanbantic.eth`](https://app.ens.domains/kanbantic.eth?activeTab=more) — registered on Sepolia ENS to deployer `0x44C1…ddDe`, expires 2027-05-09. Resolver: PublicResolver `0x8FADE66B79cC9f707aB26799354482EB93a5B7dD`. Records set: `addr`, `text:url`, `text:description`. Namehash `0xb4c81d607382cd32c89297f9a8c9984b690260118843ad2961d043cb2ea948b7` — matches the parent we use in the WorkspaceRegistry + AgentRegistry workspace.
 
-**First agent:** `noskodmi.kanbantic.eth` registered in `AgentRegistry` (namehash `0x1d0dcce73c9a6b536d489c4516a436f387e26c5719db5e612840e472a9526676`), owner `0x44C1…ddDe`, MCP endpoint `https://kanbantic-mcp.example.com/mcp` (placeholder until Phase 2 indexer ships).
+**First agent:** `noskodmi.kanbantic.eth` registered in `AgentRegistry` (namehash `0x1d0dcce73c9a6b536d489c4516a436f387e26c5719db5e612840e472a9526676`), owner `0x44C1…ddDe`, MCP endpoint `https://kanbantic.vercel.app/api/agent/mcp`.
 
 Canonical addresses live at [`packages/contracts/deployments/sepolia.json`](./packages/contracts/deployments/sepolia.json). Sourcify verification + typed ABI exports shipped in Phase 1B.
 
@@ -141,12 +143,6 @@ pnpm lint
 pnpm typecheck
 cd packages/contracts && forge test
 ```
-
-## Status
-
-Pre-implementation. The architectural spec lives at [`docs/superpowers/specs/2026-05-09-kanbantic-design.md`](docs/superpowers/specs/2026-05-09-kanbantic-design.md) — single source of truth for design decisions, contract surface, indexer schema, demo storyline, and milestones.
-
-Implementation proceeds in nine phases. Each phase has its own implementation plan executed via the [superpowers](https://github.com/obra/superpowers) skill toolchain; plans are local-only artifacts (gitignored).
 
 ## License
 

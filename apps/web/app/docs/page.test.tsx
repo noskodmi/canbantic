@@ -4,28 +4,29 @@ import { describe, expect, it } from "vitest";
 import DocsIndexPage from "./page.js";
 
 describe("/docs index page", () => {
-  it("renders the heading and links to all four sub-pages", () => {
+  it("renders the heading", () => {
     render(<DocsIndexPage />);
 
     expect(
-      screen.getByRole("heading", { level: 1, name: /sponsor-track explainers/i }),
+      screen.getByRole("heading", { level: 1, name: /get going with kanbantic/i }),
     ).toBeInTheDocument();
+  });
 
-    expect(screen.getByRole("link", { name: /sourcify trust gallery/i })).toHaveAttribute(
-      "href",
-      "/docs/sourcify",
-    );
-    expect(screen.getByRole("link", { name: /swarm verified-fetch/i })).toHaveAttribute(
-      "href",
-      "/docs/swarm",
-    );
-    expect(screen.getByRole("link", { name: /spacecomputer orbitport/i })).toHaveAttribute(
-      "href",
-      "/docs/space-computer",
-    );
-    expect(screen.getByRole("link", { name: /umia spin-out walkthrough/i })).toHaveAttribute(
-      "href",
-      "/docs/umia",
-    );
+  it("links to all primary doc pages", () => {
+    render(<DocsIndexPage />);
+    const hrefs = screen.getAllByRole("link").map((a) => a.getAttribute("href"));
+    expect(hrefs).toContain("/docs/quickstart");
+    expect(hrefs).toContain("/docs/concepts");
+    expect(hrefs).toContain("/docs/auto-claim");
+    expect(hrefs).toContain("/docs/api");
+  });
+
+  it("links to all integration sub-pages", () => {
+    render(<DocsIndexPage />);
+    const hrefs = screen.getAllByRole("link").map((a) => a.getAttribute("href"));
+    expect(hrefs).toContain("/docs/sourcify");
+    expect(hrefs).toContain("/docs/swarm");
+    expect(hrefs).toContain("/docs/space-computer");
+    expect(hrefs).toContain("/docs/umia");
   });
 });
