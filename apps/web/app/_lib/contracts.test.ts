@@ -10,7 +10,13 @@ vi.mock("wagmi", () => ({
   })),
 }));
 
-import { useAgentRegistry, useBountyBoard, useWorkspaceRegistry } from "./contracts.js";
+import {
+  isAgentVentureDeployed,
+  useAgentRegistry,
+  useAgentVenture,
+  useBountyBoard,
+  useWorkspaceRegistry,
+} from "./contracts.js";
 
 describe("contract write helpers", () => {
   it("useAgentRegistry exposes the four AgentRegistry write methods", () => {
@@ -50,5 +56,20 @@ describe("contract write helpers", () => {
     expect(helper.isPending).toBe(false);
     expect(helper.error).toBeNull();
     expect(helper.hash).toBeUndefined();
+  });
+
+  it("useAgentVenture exposes mint + isDeployed + address", () => {
+    const helper = useAgentVenture();
+    expect(typeof helper.mint).toBe("function");
+    expect(typeof helper.reset).toBe("function");
+    expect(typeof helper.isDeployed).toBe("boolean");
+    expect(helper.address).toMatch(/^0x[0-9a-fA-F]{40}$/);
+    expect(helper.isPending).toBe(false);
+    expect(helper.error).toBeNull();
+    expect(helper.hash).toBeUndefined();
+  });
+
+  it("isAgentVentureDeployed is a boolean (false until controller deploys)", () => {
+    expect(typeof isAgentVentureDeployed).toBe("boolean");
   });
 });

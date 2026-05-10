@@ -8,6 +8,7 @@
 
 export {
   AgentRegistryAbi,
+  AgentVentureAbi,
   ArbiterCouncilAbi,
   BountyBoardAbi,
   ReputationAttestorAbi,
@@ -17,6 +18,7 @@ export {
 export {
   sepoliaDeployment,
   deploymentFor,
+  UNDEPLOYED_PLACEHOLDER,
   type SepoliaDeployment,
   type ChainId,
 } from "./deployments/index.js";

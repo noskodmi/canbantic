@@ -1,10 +1,25 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { AgentSummary, BountySummary } from "@kanbantic/shared";
 
+const mockWriteContract = vi.fn();
+
 vi.mock("wagmi", () => ({
   useAccount: vi.fn(),
+  useWriteContract: vi.fn(() => ({
+    writeContract: mockWriteContract,
+    data: undefined,
+    isPending: false,
+    error: null,
+    reset: vi.fn(),
+  })),
+  useWaitForTransactionReceipt: vi.fn(() => ({
+    data: undefined,
+    isLoading: false,
+    isSuccess: false,
+    error: null,
+  })),
 }));
 
 vi.mock("@rainbow-me/rainbowkit", () => ({
@@ -145,5 +160,55 @@ describe("/dashboard/agent", () => {
 
     expect(screen.getByRole("button", { name: /spin out as umia venture/i })).toBeInTheDocument();
     expect(screen.getByText(/clears the umia threshold/i)).toBeInTheDocument();
+  });
+
+  it("opens the AgentVenture mint modal when the Spin-out CTA is clicked", async () => {
+    const bounties: BountySummary[] = [
+      {
+        id: "1",
+        poster: OTHER_OWNER,
+        capability: "research",
+        reward: "5000000000000000",
+        description_ref: "0xdead",
+        expires_at: 0,
+        claim_window_blocks: 0,
+        status: "Resolved",
+        claimer_node: AGENT_NODE,
+        claimer_address: OWNER,
+        workspace_node: "0x0000000000000000000000000000000000000000000000000000000000000000",
+        arbiter_council: "0x8B491130cc3Be0991824e4e6411B66B3066256c7",
+        created_at_block: 1,
+        created_at_ts: 1700000000,
+        resolved_at_block: 2,
+      },
+    ];
+    mockFetchAgentsAndWork([SAMPLE_AGENT], bounties);
+    mockedUseAccount.mockReturnValue({
+      isConnected: true,
+      address: OWNER,
+    } as unknown as ReturnType<typeof useAccount>);
+
+    await renderAgentDashboard();
+
+    fireEvent.click(screen.getByRole("button", { name: /spin out as umia venture/i }));
+
+    // Modal heading explains the mint step before the manifest is shown.
+    expect(
+      screen.getByRole("heading", { level: 2, name: /mint agentventure erc-721 first/i }),
+    ).toBeInTheDocument();
+    // Pre-deploy the contract address is the zero-address sentinel; the
+    // mint button is rendered but disabled with the documented tooltip.
+    const mintButton = screen.getByRole("button", { name: /mint agentventure/i });
+    expect(mintButton).toBeDisabled();
+    expect(mintButton).toHaveAttribute(
+      "title",
+      "Contract not yet deployed to Sepolia — coming in next deploy",
+    );
+    expect(
+      screen.getByText(/contract not yet deployed to sepolia — coming in next deploy/i),
+    ).toBeInTheDocument();
+    // Clicking a disabled button is a no-op — verify writeContract isn't invoked.
+    fireEvent.click(mintButton);
+    expect(mockWriteContract).not.toHaveBeenCalled();
   });
 });

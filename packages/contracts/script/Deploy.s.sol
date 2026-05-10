@@ -7,6 +7,7 @@ import { AgentRegistry } from "../src/AgentRegistry.sol";
 import { BountyBoard } from "../src/BountyBoard.sol";
 import { ReputationAttestor } from "../src/ReputationAttestor.sol";
 import { ArbiterCouncil } from "../src/ArbiterCouncil.sol";
+import { AgentVenture } from "../src/AgentVenture.sol";
 
 /// @title Deploy
 /// @notice Deploys all 5 Phase 1A contracts in topological order and writes
@@ -50,6 +51,12 @@ contract Deploy is Script {
         console2.log("arbiter[1]:", arbiters[1]);
         console2.log("arbiter[2]:", arbiters[2]);
 
+        // Phase 7 / Sponsor 3 (Umia): the AgentVenture ERC-721 wraps an
+        // agent into a "venture" once its settled revenue clears the
+        // spin-out threshold. Threshold pinned at 0.005 ETH per spec §6.
+        AgentVenture agentVenture = new AgentVenture(agents, board, 0.005 ether);
+        console2.log("AgentVenture:", address(agentVenture));
+
         vm.stopBroadcast();
 
         // Write canonical deployments record. Happens after vm.stopBroadcast
@@ -59,7 +66,8 @@ contract Deploy is Script {
         vm.serializeAddress(json, "BountyBoard", address(board));
         vm.serializeAddress(json, "AgentRegistry", address(agents));
         vm.serializeAddress(json, "ReputationAttestor", address(reputation));
-        string memory finalJson = vm.serializeAddress(json, "ArbiterCouncil", address(council));
+        vm.serializeAddress(json, "ArbiterCouncil", address(council));
+        string memory finalJson = vm.serializeAddress(json, "AgentVenture", address(agentVenture));
         vm.writeJson(finalJson, "deployments/sepolia.json");
     }
 }

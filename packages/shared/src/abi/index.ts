@@ -7,6 +7,7 @@ export {
   AgentRegistryAbi,
   type AgentRegistryAbi as AgentRegistryAbiType,
 } from "./AgentRegistry.js";
+export { AgentVentureAbi, type AgentVentureAbi as AgentVentureAbiType } from "./AgentVenture.js";
 export {
   ArbiterCouncilAbi,
   type ArbiterCouncilAbi as ArbiterCouncilAbiType,

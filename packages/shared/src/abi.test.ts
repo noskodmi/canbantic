@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   AgentRegistryAbi,
+  AgentVentureAbi,
   ArbiterCouncilAbi,
   BountyBoardAbi,
   ReputationAttestorAbi,
@@ -110,6 +111,21 @@ describe("ReputationAttestorAbi", () => {
 
   it("emits Attested", () => {
     expect(eventNames(ReputationAttestorAbi)).toContain("Attested");
+  });
+});
+
+describe("AgentVentureAbi", () => {
+  it("contains mint + agentNodeOf + accruedRevenueRootOf + tokenURI", () => {
+    const fns = functionNames(AgentVentureAbi);
+    expect(fns).toContain("mint");
+    expect(fns).toContain("agentNodeOf");
+    expect(fns).toContain("accruedRevenueRootOf");
+    expect(fns).toContain("tokenURI");
+    expect(fns).toContain("ownerOf");
+  });
+
+  it("emits AgentVentureMinted", () => {
+    expect(eventNames(AgentVentureAbi)).toContain("AgentVentureMinted");
   });
 });
 
