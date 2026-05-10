@@ -20,10 +20,16 @@ interface PageProps {
 
 export default async function AgentProfilePage({ params }: PageProps) {
   const { name } = await params;
+  // The route accepts either the bare label (`noskodmi`) or the
+  // ENS-shaped form (`noskodmi.kanbantic.eth`). The on-chain agent
+  // record stores only the bare label, so strip the `.kanbantic.eth`
+  // suffix before looking it up.
+  const rootSuffix = `.${sepoliaDeployment.ens.rootName}`;
+  const label = name.endsWith(rootSuffix) ? name.slice(0, -rootSuffix.length) : name;
   // Step 1: resolve label → node via the directory list. The detail
   // endpoint takes a node, not a label, so this two-step lookup is
   // unavoidable until we expose `?label=` server-side.
-  const summary = await getAgentByLabel(name);
+  const summary = await getAgentByLabel(label);
   if (!summary) {
     notFound();
   }
