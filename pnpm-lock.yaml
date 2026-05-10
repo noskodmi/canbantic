@@ -102,6 +102,9 @@ importers:
       '@kanbantic/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@kanbantic/sourcify-client':
+        specifier: workspace:*
+        version: link:../../packages/sourcify-client
       viem:
         specifier: ^2.21.0
         version: 2.48.11(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.4.3)
@@ -136,6 +139,18 @@ importers:
       tsx:
         specifier: ^4.19.2
         version: 4.21.0
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.19.18)(happy-dom@15.11.7)(lightningcss@1.32.0)
+
+  packages/sourcify-client:
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.2
+        version: 22.19.18
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
