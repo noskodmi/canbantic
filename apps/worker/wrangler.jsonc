@@ -17,7 +17,14 @@
   "vars": {
     "SEPOLIA_RPC": "https://ethereum-sepolia-rpc.publicnode.com",
     "SEPOLIA_CHAIN_ID": "11155111",
-    "INDEXER_CHUNK_BLOCKS": "9500"
+    "INDEXER_CHUNK_BLOCKS": "9500",
+    // SpaceComputer Orbitport — public cTRNG endpoint + pinned Ed25519
+    // pubkey. The pubkey here is a placeholder — replace with the value
+    // SpaceComputer publishes for the production cTRNG service before
+    // any real fair-claim is finalized. The worker refuses any draw
+    // whose signature doesn't verify against this pubkey.
+    "ORBITPORT_URL": "https://op-api.spacecomputer.io/api/v1/services/trng",
+    "ORBITPORT_PUBKEY": "0x0000000000000000000000000000000000000000000000000000000000000000"
   },
   "d1_databases": [
     {

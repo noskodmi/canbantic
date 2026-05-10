@@ -11,13 +11,26 @@ import { IWorkspaceRegistry } from "./interfaces/IWorkspaceRegistry.sol";
 ///         direct (poster accepts) or routed through an arbiter council.
 ///         Two claim modes: instant (claimWindowBlocks==0) and fair-claim
 ///         (commit-reveal + Orbitport cTRNG draw, see finalizeFairClaim).
-/// @dev Phase 1 simplification on fair-claim: the contract verifies the
-///      Orbitport signature off-chain (Worker is a permissioned oracle).
-///      `orbitportOracle` is the only address allowed to call
-///      `finalizeFairClaim`. Phase 2+ may swap in on-chain Ed25519
-///      verification once the cTRNG protocol is hardened. The
-///      `orbitportSig` parameter is accepted for spec compatibility but
-///      is not validated on chain in v1.
+/// @dev Phase 1 / v0.1 fair-claim trust model: the contract enforces
+///      `msg.sender == orbitportOracle` and accepts the Ed25519
+///      signature as an opaque blob. The Worker (the deployer EOA) is
+///      the permissioned oracle. Off-chain, the Worker calls Orbitport,
+///      verifies the Ed25519 signature against the pinned cTRNG
+///      operator pubkey, and only then submits `finalizeFairClaim`.
+///      The verified draw is also persisted to D1 + exposed via
+///      `GET /api/orbitport/last-draw`, so any judge can paste the on-
+///      chain tx hash, fetch that JSON, and re-verify the signature
+///      themselves with `noble/ed25519` (or any Ed25519 lib) — the
+///      trust anchor is the published Orbitport pubkey, not us.
+///
+///      v0.2 follow-up: replace the `orbitportOracle` gate with on-
+///      chain Ed25519 verification. EVM has no Ed25519 precompile on
+///      Sepolia today; the EIP for one is still draft. Options when we
+///      revisit: (a) pure-Solidity verifier (~200 lines, ~1.2M gas —
+///      expensive but fully trustless), or (b) ZK-SNARK proof of
+///      verification posted alongside the call (cheap on-chain, needs
+///      a prover service). The `orbitportSig` parameter is already
+///      part of the function signature, so the upgrade is internal.
 contract BountyBoard is IBountyBoard, ReentrancyGuard {
     IWorkspaceRegistry public immutable workspaceRegistry;
     address public immutable orbitportOracle;
@@ -142,6 +155,11 @@ contract BountyBoard is IBountyBoard, ReentrancyGuard {
     }
 
     /// @inheritdoc IBountyBoard
+    /// @dev v0.1: the `orbitportSig` parameter is unused on-chain. The
+    ///      Worker verifies the Ed25519 signature off-chain before
+    ///      sending this tx, and the `orbitportOracle` gate below
+    ///      anchors trust to the deployer wallet. v0.2 will verify the
+    ///      signature on-chain (see contract NatSpec).
     function finalizeFairClaim(
         uint256 bountyId,
         bytes32 ctrngDraw,

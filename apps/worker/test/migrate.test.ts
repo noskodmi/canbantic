@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { applyMigrations } from "../src/db/migrate.js";
 
 describe("applyMigrations", () => {
-  it("creates all 12 product tables + _migrations", async () => {
+  it("creates all 13 product tables + _migrations", async () => {
     await applyMigrations(env.DB);
 
     const result = await env.DB.prepare(
@@ -25,6 +25,7 @@ describe("applyMigrations", () => {
       "discovered_agents_apify",
       "index_cursor",
       "mcp_session_log",
+      "orbitport_draws",
       "workspace_members",
       "workspaces",
     ]) {
@@ -39,6 +40,9 @@ describe("applyMigrations", () => {
     const applied = await env.DB.prepare("SELECT filename FROM _migrations ORDER BY filename").all<{
       filename: string;
     }>();
-    expect(applied.results.map((r) => r.filename)).toEqual(["0001_initial.sql"]);
+    expect(applied.results.map((r) => r.filename)).toEqual([
+      "0001_initial.sql",
+      "0002_orbitport.sql",
+    ]);
   });
 });

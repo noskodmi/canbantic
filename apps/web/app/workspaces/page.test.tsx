@@ -56,6 +56,7 @@ function mockBounty(overrides: Partial<BountySummary>): BountySummary {
     description_ref: "0xdead",
     expires_at: 0,
     claim_window_blocks: 0,
+    claim_window_start_block: null,
     status: "Open",
     claimer_node: null,
     claimer_address: null,

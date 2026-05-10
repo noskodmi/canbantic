@@ -1,6 +1,10 @@
 import migration0001 from "../../migrations/0001_initial.sql";
+import migration0002 from "../../migrations/0002_orbitport.sql";
 
-const MIGRATIONS = [{ filename: "0001_initial.sql", sql: migration0001 }] as const;
+const MIGRATIONS = [
+  { filename: "0001_initial.sql", sql: migration0001 },
+  { filename: "0002_orbitport.sql", sql: migration0002 },
+] as const;
 
 /**
  * Apply all pending migrations idempotently. Tracks applied filenames in

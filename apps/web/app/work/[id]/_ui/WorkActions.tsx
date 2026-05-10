@@ -40,12 +40,15 @@ import { encodePacked, isHex, keccak256, toBytes } from "viem";
 import type { Hex } from "viem";
 import { useAccount, useWaitForTransactionReceipt } from "wagmi";
 import { cn } from "@kanbantic/ui";
-import type { AgentSummary, BountySummary } from "@kanbantic/shared";
+import { sepoliaDeployment } from "@kanbantic/shared";
+import type { AgentSummary, BountySummary, StatusResponse } from "@kanbantic/shared";
 
-import { getAgents } from "../../../_lib/api.js";
+import { API_BASE, getAgents } from "../../../_lib/api.js";
+import { etherscanAddress } from "../../../_lib/format.js";
 import { useBountyBoard, useReputationAttestor } from "../../../_lib/contracts.js";
 import { AttestationModal } from "./AttestationModal.js";
 import type { AttestationSubmitArgs } from "./AttestationModal.js";
+import { OrbitportWaitingPanel } from "./OrbitportWaitingPanel.js";
 
 const ETHERSCAN_TX = "https://sepolia.etherscan.io/tx";
 
@@ -121,12 +124,7 @@ export function WorkActions({ bounty }: WorkActionsProps) {
   }
 
   if (bounty.status === "ClaimWindowOpen") {
-    if (isPoster) {
-      return (
-        <PosterCantSelfClaim message="You posted this bounty — wait for agents to commit during the claim window." />
-      );
-    }
-    return <CommitClaimAction bounty={bounty} />;
+    return <ClaimWindowOpenBranch bounty={bounty} isPoster={isPoster} />;
   }
 
   if (bounty.status === "Claimed") {
@@ -362,6 +360,55 @@ function ClaimAction({ bounty, wallet }: ClaimActionProps) {
 }
 
 // ─────────────────────── Commit-claim ─────────────────────── //
+
+/**
+ * Polls `/api/status` to learn the indexed Sepolia head, then either:
+ *   - renders the `OrbitportWaitingPanel` if the commit window has closed
+ *     (we're between window-close and the worker's `finalizeFairClaim`
+ *     tx landing — the on-chain status is still `ClaimWindowOpen` but
+ *     no new commits can be accepted); or
+ *   - renders `CommitClaimAction` (or the "you posted this" panel) if
+ *     the window is still open.
+ */
+function ClaimWindowOpenBranch({ bounty, isPoster }: { bounty: BountySummary; isPoster: boolean }) {
+  const status = useQuery({
+    queryKey: ["status"],
+    queryFn: async (): Promise<StatusResponse> => {
+      const res = await fetch(`${API_BASE}/api/status`, {
+        headers: { accept: "application/json" },
+      });
+      if (!res.ok) throw new Error(`status ${String(res.status)}`);
+      return (await res.json()) as StatusResponse;
+    },
+    refetchInterval: 10_000,
+    retry: false,
+  });
+
+  const closeBlock =
+    bounty.claim_window_start_block !== null && bounty.claim_window_blocks > 0
+      ? bounty.claim_window_start_block + bounty.claim_window_blocks
+      : null;
+
+  const head = status.data?.lastBlock ?? null;
+  const windowClosed = closeBlock !== null && head !== null && head >= closeBlock;
+
+  if (windowClosed) {
+    return (
+      <OrbitportWaitingPanel
+        bounty={bounty}
+        bountyBoardEtherscan={etherscanAddress(sepoliaDeployment.contracts.BountyBoard)}
+      />
+    );
+  }
+
+  if (isPoster) {
+    return (
+      <PosterCantSelfClaim message="You posted this bounty — wait for agents to commit during the claim window." />
+    );
+  }
+
+  return <CommitClaimAction bounty={bounty} />;
+}
 
 interface CommitClaimActionProps {
   bounty: BountySummary;
