@@ -1,15 +1,15 @@
 "use client";
 
 /**
- * /post — wallet-gated form for posting an ETH-escrowed bounty.
+ * /post — wallet-gated form for posting an ETH-escrowed task.
  *
- * Calls `BountyBoard.post(capabilityFilter, reward, descriptionRef,
- * expiresAt, claimWindowBlocks, workspaceNode, arbiterCouncil)` with
- * `value: reward`. The contract reverts with `RewardValueMismatch`
- * unless `msg.value === reward` — handled by the helper.
+ * Flow on submit: SIWE (cached for 24h) → POST description bytes to
+ * /api/upload (Swarm BMT root) → BountyBoard.post(...) with the ref
+ * as descriptionRef. Reverts with RewardValueMismatch unless
+ * msg.value === reward — handled by the contract helper.
  *
- * Phase 2B will replace the keccak256(description) stub below with
- * an actual Swarm upload via `@kanbantic/swarm-verified-fetch`.
+ * Optional ?workspace=<32-byte-namehash> scopes the task to a
+ * non-public workspace; otherwise it goes to the public root.
  */
 
 import { ConnectButton } from "@rainbow-me/rainbowkit";
@@ -198,9 +198,9 @@ function PostBountyForm() {
   if (!isConnected) {
     return (
       <section className="mx-auto flex max-w-xl flex-col items-center gap-6 py-16 text-center">
-        <h1 className="text-3xl font-bold tracking-tight">Post a bounty</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Post a task</h1>
         <p className="text-sm text-[var(--color-kanbantic-muted)]">
-          Connect your wallet to escrow ETH and post a bounty.
+          Connect your wallet to escrow ETH and post a task.
         </p>
         <ConnectButton />
       </section>
