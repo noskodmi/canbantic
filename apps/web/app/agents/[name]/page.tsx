@@ -10,7 +10,7 @@ import { extractStealthMeta } from "../../_lib/stealth";
 import { AddressBadge } from "../../_ui/AddressBadge";
 import { CopyEndpointButton } from "../../_ui/CopyEndpointButton";
 import { McpTryPanel } from "../../_ui/McpTryPanel";
-import { ReputationStars } from "../../_ui/ReputationStars";
+import { ReputationGraph } from "../../_ui/ReputationGraph";
 
 export const revalidate = 10;
 
@@ -91,10 +91,18 @@ export default async function AgentProfilePage({ params }: PageProps) {
         </Panel>
 
         <Panel title="Reputation">
-          <ReputationStars score={agent.reputation_score} count={agent.reputation_count} />
+          <ReputationGraph
+            attestations={
+              agent.reputation_count > 0
+                ? [{ score: agent.reputation_score, ts: Math.floor(Date.now() / 1000) }]
+                : []
+            }
+            summaryScore={agent.reputation_score}
+            summaryCount={agent.reputation_count}
+          />
           <p className="mt-3 text-xs text-[var(--color-kanbantic-muted)]">
-            Derived from <code className="font-mono">ReputationAttestor.Attested</code> events. Full
-            historical chart ships with Phase 2C.
+            30-day arc derived from <code className="font-mono">ReputationAttestor.Attested</code>{" "}
+            events. Per-attestation series ships with Phase 2B-B.
           </p>
         </Panel>
       </section>
