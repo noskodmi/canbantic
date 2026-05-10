@@ -20,6 +20,7 @@ import {
   AgentRegistryAbi,
   BountyBoardAbi,
   ReputationAttestorAbi,
+  WorkspaceRegistryAbi,
 } from "@kanbantic/shared";
 import type { Address, Hex } from "viem";
 import { useWriteContract } from "wagmi";
@@ -34,6 +35,7 @@ type WriteContractError = ReturnType<typeof useWriteContract>["error"];
 const AGENT_REGISTRY_ADDRESS: Address = sepoliaDeployment.contracts.AgentRegistry;
 const BOUNTY_BOARD_ADDRESS: Address = sepoliaDeployment.contracts.BountyBoard;
 const REPUTATION_ATTESTOR_ADDRESS: Address = sepoliaDeployment.contracts.ReputationAttestor;
+const WORKSPACE_REGISTRY_ADDRESS: Address = sepoliaDeployment.contracts.WorkspaceRegistry;
 
 /**
  * Empty bytes payload. Used for ABI-required `bytes` parameters that
@@ -320,6 +322,103 @@ export function useReputationAttestor(): UseReputationAttestorReturn {
         address: REPUTATION_ATTESTOR_ADDRESS,
         functionName: "attest",
         args: [bountyId, agentNode, score, commentRef],
+      });
+    },
+    isPending,
+    error,
+    hash: data,
+    reset,
+  };
+}
+
+export interface CreateWorkspaceArgs {
+  /**
+   * Pre-computed namehash of the workspace's full ENS name (e.g.
+   * `namehash("alpha.kanbantic.eth")`). The contract stores this as
+   * `wsNode` *and* `parentNode` — see the v1 caveat in
+   * `WorkspaceRegistry.sol`. The label-keccak parent-keccak split
+   * happens off-chain in the UI.
+   */
+  parentNode: Hex;
+  /** Initial member set — `msg.sender` is added implicitly as admin. */
+  initialMembers: readonly Address[];
+}
+
+export interface AddWorkspaceMemberArgs {
+  wsNode: Hex;
+  member: Address;
+}
+
+export interface RemoveWorkspaceMemberArgs {
+  wsNode: Hex;
+  member: Address;
+}
+
+export interface TransferWorkspaceAdminArgs {
+  wsNode: Hex;
+  newAdmin: Address;
+}
+
+export interface UseWorkspaceRegistryReturn {
+  create: (args: CreateWorkspaceArgs) => void;
+  addMember: (args: AddWorkspaceMemberArgs) => void;
+  removeMember: (args: RemoveWorkspaceMemberArgs) => void;
+  transferAdmin: (args: TransferWorkspaceAdminArgs) => void;
+  isPending: boolean;
+  error: WriteContractError;
+  hash: Hex | undefined;
+  reset: () => void;
+}
+
+/**
+ * `useWorkspaceRegistry` — wraps `useWriteContract` against
+ * `WorkspaceRegistry` at
+ * `sepoliaDeployment.contracts.WorkspaceRegistry`.
+ *
+ * Function names mirror the .sol exactly: `createWorkspace`,
+ * `addMember`, `removeMember`, `transferAdmin`. The exposed JS
+ * names drop the `Workspace` prefix on `create` for ergonomics
+ * (`useWorkspaceRegistry().create(...)`).
+ *
+ * Caller-side responsibility: compute the workspace namehash via
+ * viem's `namehash(<label>.<rootName>)` before calling `create`. The
+ * contract stores `wsNode = parentNode`, so the value passed in is
+ * also the key future calls (`addMember`, etc.) will use.
+ */
+export function useWorkspaceRegistry(): UseWorkspaceRegistryReturn {
+  const { writeContract, data, isPending, error, reset } = useWriteContract();
+
+  return {
+    create: ({ parentNode, initialMembers }) => {
+      writeContract({
+        abi: WorkspaceRegistryAbi,
+        address: WORKSPACE_REGISTRY_ADDRESS,
+        functionName: "createWorkspace",
+        args: [parentNode, initialMembers],
+      });
+    },
+    addMember: ({ wsNode, member }) => {
+      writeContract({
+        abi: WorkspaceRegistryAbi,
+        address: WORKSPACE_REGISTRY_ADDRESS,
+        functionName: "addMember",
+        args: [wsNode, member],
+      });
+    },
+    removeMember: ({ wsNode, member }) => {
+      writeContract({
+        abi: WorkspaceRegistryAbi,
+        address: WORKSPACE_REGISTRY_ADDRESS,
+        functionName: "removeMember",
+        args: [wsNode, member],
+      });
+    },
+    transferAdmin: ({ wsNode, newAdmin }) => {
+      writeContract({
+        abi: WorkspaceRegistryAbi,
+        address: WORKSPACE_REGISTRY_ADDRESS,
+        functionName: "transferAdmin",
+        args: [wsNode, newAdmin],
       });
     },
     isPending,

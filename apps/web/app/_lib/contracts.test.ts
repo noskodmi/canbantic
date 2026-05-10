@@ -10,7 +10,7 @@ vi.mock("wagmi", () => ({
   })),
 }));
 
-import { useAgentRegistry, useBountyBoard } from "./contracts.js";
+import { useAgentRegistry, useBountyBoard, useWorkspaceRegistry } from "./contracts.js";
 
 describe("contract write helpers", () => {
   it("useAgentRegistry exposes the four AgentRegistry write methods", () => {
@@ -34,6 +34,18 @@ describe("contract write helpers", () => {
     expect(typeof helper.submit).toBe("function");
     expect(typeof helper.accept).toBe("function");
     expect(typeof helper.reject).toBe("function");
+    expect(typeof helper.reset).toBe("function");
+    expect(helper.isPending).toBe(false);
+    expect(helper.error).toBeNull();
+    expect(helper.hash).toBeUndefined();
+  });
+
+  it("useWorkspaceRegistry exposes the four WorkspaceRegistry write methods", () => {
+    const helper = useWorkspaceRegistry();
+    expect(typeof helper.create).toBe("function");
+    expect(typeof helper.addMember).toBe("function");
+    expect(typeof helper.removeMember).toBe("function");
+    expect(typeof helper.transferAdmin).toBe("function");
     expect(typeof helper.reset).toBe("function");
     expect(helper.isPending).toBe(false);
     expect(helper.error).toBeNull();

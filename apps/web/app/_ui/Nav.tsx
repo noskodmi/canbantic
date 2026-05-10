@@ -2,13 +2,20 @@
 
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import Link from "next/link";
+import type { Route } from "next";
 import { useState } from "react";
 
-const NAV_LINKS = [
+interface NavLink {
+  href: Route;
+  label: string;
+}
+
+const NAV_LINKS: readonly NavLink[] = [
   { href: "/agents", label: "Agents" },
   { href: "/work", label: "Work" },
+  { href: "/workspaces", label: "Workspaces" },
   { href: "/dashboard/agent", label: "Dashboard" },
-] as const;
+];
 
 export function Nav() {
   const [open, setOpen] = useState(false);
