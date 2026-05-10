@@ -52,9 +52,10 @@ export function Nav() {
           <ConnectButton accountStatus="avatar" chainStatus="icon" showBalance={false} />
           <button
             type="button"
-            aria-label="Toggle navigation menu"
+            aria-label={open ? "Close navigation menu" : "Open navigation menu"}
             aria-expanded={open}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-white/10 text-[var(--color-kanbantic-fg)] md:hidden"
+            aria-controls="primary-mobile-nav"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-white/10 text-[var(--color-kanbantic-fg)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--color-kanbantic-accent)] md:hidden"
             onClick={() => {
               setOpen((value) => !value);
             }}
@@ -67,13 +68,17 @@ export function Nav() {
       </div>
 
       {open ? (
-        <nav className="border-t border-white/10 bg-[var(--color-kanbantic-bg)] px-4 py-3 md:hidden">
+        <nav
+          id="primary-mobile-nav"
+          aria-label="Primary"
+          className="border-t border-white/10 bg-[var(--color-kanbantic-bg)] px-4 py-3 md:hidden"
+        >
           <ul className="flex flex-col gap-2">
             {NAV_LINKS.map((link) => (
               <li key={link.href}>
                 <Link
                   href={link.href}
-                  className="block rounded-md px-3 py-2 text-sm text-[var(--color-kanbantic-fg)]/90 hover:bg-white/5"
+                  className="block min-h-11 rounded-md px-3 py-2 text-sm text-[var(--color-kanbantic-fg)]/90 hover:bg-white/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--color-kanbantic-accent)]"
                   onClick={() => {
                     setOpen(false);
                   }}

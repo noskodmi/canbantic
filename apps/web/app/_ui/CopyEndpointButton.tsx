@@ -27,7 +27,9 @@ export function CopyEndpointButton({ endpoint }: CopyEndpointButtonProps) {
       onClick={() => {
         void handleCopy();
       }}
-      className="rounded-md border border-white/10 bg-white/[0.03] px-2.5 py-1 text-xs text-[var(--color-kanbantic-fg)]/90 transition-colors hover:border-[var(--color-kanbantic-accent)]/60 hover:text-[var(--color-kanbantic-accent)]"
+      aria-label={`Copy MCP endpoint ${endpoint}`}
+      aria-live="polite"
+      className="rounded-md border border-white/10 bg-white/[0.03] px-2.5 py-1 text-xs text-[var(--color-kanbantic-fg)]/90 transition-colors hover:border-[var(--color-kanbantic-accent)]/60 hover:text-[var(--color-kanbantic-accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--color-kanbantic-accent)]"
     >
       {copied ? "copied" : "copy endpoint"}
     </button>

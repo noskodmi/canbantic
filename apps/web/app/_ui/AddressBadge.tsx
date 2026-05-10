@@ -26,18 +26,23 @@ export function AddressBadge({ address, showEtherscan = false }: AddressBadgePro
   }
 
   return (
-    <span className="inline-flex items-center gap-2 font-mono text-xs">
+    <span className="inline-flex flex-wrap items-center gap-2 font-mono text-xs">
       <button
         type="button"
         onClick={() => {
           void handleCopy();
         }}
         title={`Copy ${address}`}
-        className="rounded-md border border-white/10 bg-white/[0.03] px-2 py-0.5 text-[var(--color-kanbantic-fg)]/90 transition-colors hover:border-[var(--color-kanbantic-accent)]/60 hover:text-[var(--color-kanbantic-accent)]"
+        aria-label={`Copy address ${address}`}
+        className="rounded-md border border-white/10 bg-white/[0.03] px-2 py-0.5 text-[var(--color-kanbantic-fg)]/90 transition-colors hover:border-[var(--color-kanbantic-accent)]/60 hover:text-[var(--color-kanbantic-accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--color-kanbantic-accent)]"
       >
         {truncateAddress(address)}
       </button>
-      {copied ? <span className="text-[var(--color-kanbantic-accent)]">copied</span> : null}
+      {copied ? (
+        <span role="status" aria-live="polite" className="text-[var(--color-kanbantic-accent)]">
+          copied
+        </span>
+      ) : null}
       {showEtherscan ? (
         <a
           href={etherscanAddress(address)}

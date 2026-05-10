@@ -36,6 +36,9 @@ describe("Footer indexer health pill", () => {
     render(withQueryClient(<Footer />));
 
     const status = await screen.findByRole("status");
+    // The pill must announce status changes politely so a screen reader
+    // reads out indexer transitions instead of staying silent.
+    expect(status).toHaveAttribute("aria-live", "polite");
     await waitFor(() => {
       expect(status).toHaveTextContent(/indexer healthy/i);
     });

@@ -54,7 +54,13 @@ describe("/agents/[name] profile page", () => {
     expect(
       screen.getByRole("heading", { level: 1, name: /noskodmi\.kanbantic\.eth/i }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /0x44C1.{1,3}dDdE/ })).toBeInTheDocument();
+    // AddressBadge exposes the full address via aria-label so screen readers
+    // announce the copy-target verbatim, while the visible text stays truncated.
+    expect(
+      screen.getByRole("button", {
+        name: /copy address 0x44C176989D16f5C2A846cf59d4Cf68Af1006dDdE/i,
+      }),
+    ).toBeInTheDocument();
     expect(screen.getByText("registry")).toBeInTheDocument();
     expect(screen.getByText("owner", { selector: "li" })).toBeInTheDocument();
     expect(screen.getByText("demo", { selector: "li" })).toBeInTheDocument();

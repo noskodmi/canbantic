@@ -22,10 +22,13 @@
  */
 
 import type { ReactNode, SyntheticEvent } from "react";
-import { useEffect, useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { keccak256, stringToBytes } from "viem";
 import type { Hex } from "viem";
 import { cn } from "@kanbantic/ui";
+
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 const ZERO_BYTES32: Hex = `0x${"0".repeat(64)}`;
 
@@ -56,6 +59,8 @@ export function AttestationModal({
 }: AttestationModalProps) {
   const headingId = useId();
   const commentId = useId();
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null);
 
   const [score, setScore] = useState<number>(5);
   const [comment, setComment] = useState<string>("");
@@ -66,16 +71,44 @@ export function AttestationModal({
     return keccak256(stringToBytes(trimmed));
   }, [comment]);
 
-  // Esc-to-close, focus trap-lite (no library, modal is short).
+  // Esc-to-close + focus trap + return focus to the trigger on unmount.
   useEffect(() => {
+    previouslyFocusedRef.current =
+      typeof document === "undefined" ? null : (document.activeElement as HTMLElement | null);
+
+    // Move focus into the dialog (first focusable element).
+    const focusables = dialogRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
+    focusables?.[0]?.focus();
+
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape" && !busy) {
+        event.stopPropagation();
         onClose();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const list = dialogRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
+      if (!list || list.length === 0) return;
+      const first = list[0];
+      const last = list[list.length - 1];
+      if (first === undefined || last === undefined) return;
+      const active = document.activeElement as HTMLElement | null;
+      if (event.shiftKey && (active === first || !dialogRef.current?.contains(active))) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
       }
     }
     window.addEventListener("keydown", onKeyDown);
     return () => {
       window.removeEventListener("keydown", onKeyDown);
+      // Return focus to whatever opened the modal.
+      const prev = previouslyFocusedRef.current;
+      if (prev && typeof prev.focus === "function") {
+        prev.focus();
+      }
     };
   }, [onClose, busy]);
 
@@ -87,12 +120,13 @@ export function AttestationModal({
 
   return (
     <div
+      ref={dialogRef}
       role="dialog"
       aria-modal="true"
       aria-labelledby={headingId}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-8"
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/70 px-4 py-8"
     >
-      <div className="w-full max-w-lg rounded-lg border border-white/10 bg-[var(--color-kanbantic-bg)] p-6 shadow-2xl">
+      <div className="my-auto max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-lg border border-white/10 bg-[var(--color-kanbantic-bg)] p-6 shadow-2xl">
         <header className="flex items-start justify-between gap-4">
           <div className="flex flex-col gap-1">
             <h2 id={headingId} className="text-xl font-semibold tracking-tight">
@@ -106,10 +140,10 @@ export function AttestationModal({
             type="button"
             onClick={onClose}
             disabled={busy}
-            className="rounded-md p-1 text-[var(--color-kanbantic-muted)] hover:text-[var(--color-kanbantic-fg)] disabled:cursor-not-allowed disabled:opacity-40"
-            aria-label="Close"
+            className="rounded-md p-1 text-[var(--color-kanbantic-muted)] hover:text-[var(--color-kanbantic-fg)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--color-kanbantic-accent)] disabled:cursor-not-allowed disabled:opacity-40"
+            aria-label="Close attestation dialog"
           >
-            ✕
+            <span aria-hidden="true">✕</span>
           </button>
         </header>
 

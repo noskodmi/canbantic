@@ -5,6 +5,21 @@ import { keccak256, stringToBytes } from "viem";
 import { AttestationModal } from "./AttestationModal.js";
 
 describe("<AttestationModal>", () => {
+  it("exposes a labelled dialog role with aria-modal", () => {
+    render(<AttestationModal bountyId="42" onSubmit={vi.fn()} onClose={vi.fn()} />);
+
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toHaveAttribute("aria-modal", "true");
+
+    const labelledBy = dialog.getAttribute("aria-labelledby");
+    expect(labelledBy).not.toBeNull();
+    if (labelledBy === null) return;
+    const heading = document.getElementById(labelledBy);
+    expect(heading?.textContent).toMatch(/accept submission/i);
+
+    expect(screen.getByRole("button", { name: /close attestation dialog/i })).toBeInTheDocument();
+  });
+
   it("renders the score selector and an empty comment field", () => {
     render(<AttestationModal bountyId="42" onSubmit={vi.fn()} onClose={vi.fn()} />);
 

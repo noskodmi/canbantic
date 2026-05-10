@@ -203,7 +203,11 @@ function TxStatusBlock({
   }
 
   return (
-    <div className="flex flex-col gap-2 rounded-md border border-white/10 bg-white/[0.03] px-3 py-3 text-xs">
+    <div
+      role="status"
+      aria-live="polite"
+      className="flex flex-col gap-2 rounded-md border border-white/10 bg-white/[0.03] px-3 py-3 text-xs"
+    >
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-[var(--color-kanbantic-muted)]">tx:</span>
         <a
@@ -692,7 +696,7 @@ function SettleAction({ bounty }: SettleActionProps) {
       <p className="text-sm text-[var(--color-kanbantic-fg)]/85">
         Review the submission, then accept (signs an attestation + releases escrow) or reject.
       </p>
-      <div className="flex flex-col gap-2 sm:flex-row">
+      <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
         <button
           type="button"
           onClick={() => {
@@ -700,9 +704,10 @@ function SettleAction({ bounty }: SettleActionProps) {
           }}
           disabled={acceptBusy || acceptDone}
           className={cn(
-            "rounded-md px-4 py-2 text-sm font-semibold transition-opacity",
+            "min-h-11 rounded-md px-4 py-2 text-sm font-semibold transition-opacity",
             "bg-[var(--color-kanbantic-accent)] text-[var(--color-kanbantic-bg)]",
             "disabled:cursor-not-allowed disabled:opacity-50 hover:enabled:opacity-90",
+            "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-kanbantic-accent)]",
           )}
         >
           {acceptDone ? "Accepted" : "Accept"}
@@ -712,9 +717,10 @@ function SettleAction({ bounty }: SettleActionProps) {
           onClick={onReject}
           disabled={acceptBusy || acceptDone || board.isPending}
           className={cn(
-            "rounded-md border border-red-500/40 px-4 py-2 text-sm font-semibold text-red-300",
+            "min-h-11 rounded-md border border-red-500/40 px-4 py-2 text-sm font-semibold text-red-300",
             "hover:enabled:bg-red-500/10",
             "disabled:cursor-not-allowed disabled:opacity-50",
+            "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-400",
           )}
         >
           Reject
