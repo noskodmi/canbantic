@@ -39,3 +39,9 @@ packages/contracts/broadcast/
 # coverage
 coverage/
 *.lcov
+
+# per-event submission/recording artefacts — kept locally, not on github
+docs/devfolio-submission.md
+docs/video-script-90s.md
+docs/recording-checklist.md
+.vercel
