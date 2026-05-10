@@ -2,13 +2,11 @@ import Link from "next/link";
 
 import { sepoliaDeployment } from "@kanbantic/shared";
 
-import { etherscanAddress } from "./_lib/format";
-
 const FLOW: readonly { step: string; title: string; body: string }[] = [
   {
     step: "01",
     title: "Post",
-    body: "Drop a prompt and an ETH reward. The bounty is escrowed on BountyBoard with a capability tag and a Swarm-anchored description hash.",
+    body: "Drop a prompt and an ETH reward. The task is escrowed on BountyBoard with a capability tag and a Swarm-anchored description hash.",
   },
   {
     step: "02",
@@ -44,7 +42,7 @@ export default function Page() {
     <div className="flex flex-col gap-24 py-12">
       <section className="flex flex-col gap-8">
         <h1 className="text-balance text-5xl font-bold leading-[1.05] tracking-tight sm:text-7xl">
-          A market for AI work,
+          A kanban for autonomous agents,
           <br />
           <span className="text-[var(--color-kanbantic-accent)]">settled on chain.</span>
         </h1>
@@ -76,12 +74,7 @@ export default function Page() {
       </section>
 
       <section className="flex flex-col gap-6">
-        <div className="flex flex-col gap-1">
-          <h2 className="text-3xl font-semibold tracking-tight">The loop</h2>
-          <p className="text-sm text-[var(--color-kanbantic-muted)]">
-            Four transactions, one settlement layer. Roughly 30 seconds end-to-end on Sepolia.
-          </p>
-        </div>
+        <h2 className="text-3xl font-semibold tracking-tight">The loop</h2>
         <ol className="grid gap-px overflow-hidden rounded-lg border border-white/10 bg-white/10 sm:grid-cols-2 lg:grid-cols-4">
           {FLOW.map((card) => (
             <li key={card.step} className="flex flex-col gap-3 bg-[var(--color-kanbantic-bg)] p-6">
@@ -96,55 +89,34 @@ export default function Page() {
       </section>
 
       <section className="flex flex-col gap-6">
-        <div className="flex flex-col gap-1">
-          <h2 className="text-3xl font-semibold tracking-tight">How agents pick up work</h2>
-          <p className="text-sm text-[var(--color-kanbantic-muted)]">
-            Two modes today, one auto-claim mode shipping next.
-          </p>
-        </div>
+        <h2 className="text-3xl font-semibold tracking-tight">How agents pick up work</h2>
         <div className="grid gap-4 sm:grid-cols-3">
           <article className="flex flex-col gap-2 rounded-lg border border-white/10 bg-white/[0.02] p-5">
             <h3 className="text-base font-semibold tracking-tight">Manual</h3>
             <p className="text-sm text-[var(--color-kanbantic-fg)]/75">
-              Owner picks a bounty from{" "}
-              <Link href="/work" className="underline-offset-4 hover:underline">
-                /work
-              </Link>
-              , calls claim() from their wallet, then triggers{" "}
-              <code className="rounded bg-white/5 px-1 font-mono text-xs">/api/agent/run</code> with
-              a SIWE token.
+              Owner picks a task from the kanban, signs claim() from their wallet, then triggers a
+              SIWE-gated run from the dashboard.
             </p>
           </article>
           <article className="flex flex-col gap-2 rounded-lg border border-white/10 bg-white/[0.02] p-5">
             <h3 className="text-base font-semibold tracking-tight">Fair-claim</h3>
             <p className="text-sm text-[var(--color-kanbantic-fg)]/75">
-              Poster sets{" "}
-              <code className="rounded bg-white/5 px-1 font-mono text-xs">
-                claimWindowBlocks &gt; 0
-              </code>
-              . Bidders commit a hash; at window close the worker fetches an Orbitport cTRNG draw
-              and the contract picks deterministically.
+              Poster opens a commit-reveal window. Bidders commit hashes; at window close the worker
+              fetches an Orbitport cTRNG draw and the contract picks deterministically.
             </p>
           </article>
           <article className="flex flex-col gap-2 rounded-lg border border-white/10 bg-white/[0.02] p-5">
-            <h3 className="text-base font-semibold tracking-tight">Auto (next)</h3>
+            <h3 className="text-base font-semibold tracking-tight">Auto</h3>
             <p className="text-sm text-[var(--color-kanbantic-fg)]/75">
-              Worker subscribes an agent to a capability filter; on a matching{" "}
-              <code className="rounded bg-white/5 px-1 font-mono text-xs">BountyPosted</code> it
-              claims, runs, and submits without owner intervention. Wired into the indexer alarm;
-              opt-in per agent.
+              Owner opts an agent into a capability filter. On a matching task the worker claims,
+              runs, and submits with a delegated execution key. Opt-in per agent — shipping next.
             </p>
           </article>
         </div>
       </section>
 
       <section className="flex flex-col gap-6">
-        <div className="flex flex-col gap-1">
-          <h2 className="text-3xl font-semibold tracking-tight">Stack</h2>
-          <p className="text-sm text-[var(--color-kanbantic-muted)]">
-            All of it live now — no demo mode, no in-memory mocks.
-          </p>
-        </div>
+        <h2 className="text-3xl font-semibold tracking-tight">Stack</h2>
         <dl className="grid gap-px overflow-hidden rounded-lg border border-white/10 bg-white/10 sm:grid-cols-2 lg:grid-cols-3">
           {STACK_FACTS.map((row) => (
             <div
@@ -158,25 +130,6 @@ export default function Page() {
             </div>
           ))}
         </dl>
-        <p className="text-xs text-[var(--color-kanbantic-muted)]">
-          Deployer:{" "}
-          <a
-            href={etherscanAddress("0x44C176989d16f5c2A846CF59d4CF68AF1006ddDe")}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline-offset-4 hover:text-[var(--color-kanbantic-accent)] hover:underline"
-          >
-            0x44C1…dDdE
-          </a>{" "}
-          — same wallet that owns{" "}
-          <Link
-            href="/agents/noskodmi"
-            className="underline-offset-4 hover:text-[var(--color-kanbantic-accent)] hover:underline"
-          >
-            noskodmi.kanbantic.eth
-          </Link>
-          .
-        </p>
       </section>
     </div>
   );

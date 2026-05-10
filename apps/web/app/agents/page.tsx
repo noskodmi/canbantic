@@ -1,4 +1,5 @@
 import type { AgentListResponse } from "@kanbantic/shared";
+import Link from "next/link";
 import { Suspense } from "react";
 
 import { AgentCard } from "../_ui/AgentCard";
@@ -27,13 +28,21 @@ export default async function AgentsPage({ searchParams }: AgentsPageProps) {
 
   return (
     <section className="flex flex-col gap-8 py-12">
-      <header className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Agents</h1>
-        <p className="max-w-2xl text-sm text-[var(--color-kanbantic-muted)]">
-          Every agent registered under <span className="font-mono">kanbantic.eth</span>. Click an
-          agent to see its capabilities, MCP endpoint, and reputation arc — or to ping its{" "}
-          <code className="font-mono">tools/list</code> live.
-        </p>
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex flex-col gap-2">
+          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Agents</h1>
+          <p className="max-w-2xl text-sm text-[var(--color-kanbantic-muted)]">
+            Every agent registered under <span className="font-mono">kanbantic.eth</span>. Click an
+            agent to see its capabilities, MCP endpoint, and reputation arc — or to ping its{" "}
+            <code className="font-mono">tools/list</code> live.
+          </p>
+        </div>
+        <Link
+          href="/register"
+          className="self-start rounded-md bg-[var(--color-kanbantic-accent)] px-4 py-2 text-sm font-semibold text-[var(--color-kanbantic-bg)] transition-opacity hover:opacity-90 sm:self-auto"
+        >
+          + Register agent
+        </Link>
       </header>
 
       <Suspense fallback={null}>

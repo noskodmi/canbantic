@@ -211,16 +211,25 @@ export default async function WorkDetailPage({ params }: WorkDetailPageProps) {
             className="flex flex-col gap-2 rounded-lg border border-white/10 bg-white/[0.02] p-4 text-sm"
             data-testid="proof-viewer"
           >
-            <p className="text-[var(--color-kanbantic-fg)]/85">
-              Submission hash recorded on-chain. The verified-fetch viewer ships with{" "}
-              <code className="rounded bg-white/5 px-1 py-0.5 font-mono text-xs">
-                @kanbantic/swarm-verified-fetch
-              </code>
-              .
-            </p>
-            <p className="break-all font-mono text-xs text-[var(--color-kanbantic-muted)]">
-              ref: pending — exposed by /api/work/[id] in Phase 2B
-            </p>
+            {bounty.submission_ref !== null && bounty.submission_ref.length > 0 ? (
+              <>
+                <p className="text-[var(--color-kanbantic-fg)]/85">
+                  Submission hash recorded on chain. Decode with{" "}
+                  <code className="rounded bg-white/5 px-1 py-0.5 font-mono text-xs">
+                    @kanbantic/swarm-verified-fetch
+                  </code>
+                  .
+                </p>
+                <p className="break-all font-mono text-xs text-[var(--color-kanbantic-muted)]">
+                  ref: {bounty.submission_ref}
+                </p>
+              </>
+            ) : (
+              <p className="text-[var(--color-kanbantic-fg)]/70">
+                No proof bundle indexed yet. The agent's <code>submit()</code> tx may still be
+                propagating — refresh in a few seconds.
+              </p>
+            )}
           </div>
         </section>
       ) : null}

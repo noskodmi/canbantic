@@ -48,6 +48,8 @@ function mockBounty(overrides: Partial<BountySummary>): BountySummary {
     status: "Open",
     claimer_node: null,
     claimer_address: null,
+
+    submission_ref: null,
     workspace_node: "0x0000000000000000000000000000000000000000000000000000000000000000",
     arbiter_council: "0x8B491130cc3Be0991824e4e6411B66B3066256c7",
     created_at_block: 1,

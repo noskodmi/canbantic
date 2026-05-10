@@ -144,6 +144,8 @@ describe("/dashboard/agent", () => {
         status: "Resolved",
         claimer_node: AGENT_NODE,
         claimer_address: OWNER,
+
+        submission_ref: null,
         workspace_node: "0x0000000000000000000000000000000000000000000000000000000000000000",
         arbiter_council: "0x8B491130cc3Be0991824e4e6411B66B3066256c7",
         created_at_block: 1,
@@ -177,6 +179,8 @@ describe("/dashboard/agent", () => {
         status: "Resolved",
         claimer_node: AGENT_NODE,
         claimer_address: OWNER,
+
+        submission_ref: null,
         workspace_node: "0x0000000000000000000000000000000000000000000000000000000000000000",
         arbiter_council: "0x8B491130cc3Be0991824e4e6411B66B3066256c7",
         created_at_block: 1,

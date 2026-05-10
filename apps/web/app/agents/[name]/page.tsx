@@ -134,8 +134,7 @@ export default async function AgentProfilePage({ params }: PageProps) {
             summaryCount={agent.reputation_count}
           />
           <p className="mt-3 text-xs text-[var(--color-kanbantic-muted)]">
-            30-day arc derived from <code className="font-mono">ReputationAttestor.Attested</code>{" "}
-            events. Per-attestation series ships with Phase 2B-B.
+            Trimmed-mean over <code className="font-mono">ReputationAttestor.Attested</code> events.
           </p>
         </Panel>
       </section>

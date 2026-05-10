@@ -40,6 +40,8 @@ function mockBounty(overrides: Partial<BountySummary>): BountySummary {
     status: "Open",
     claimer_node: null,
     claimer_address: null,
+
+    submission_ref: null,
     workspace_node: "0x0000000000000000000000000000000000000000000000000000000000000000",
     arbiter_council: sepoliaDeployment.contracts.ArbiterCouncil,
     created_at_block: 1,

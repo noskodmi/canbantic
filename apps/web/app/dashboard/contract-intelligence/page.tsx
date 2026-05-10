@@ -40,12 +40,6 @@ export default function ContractIntelligenceDashboardPage() {
       </header>
 
       <ContractIntelligenceForm sampleContracts={sampleContracts} />
-
-      <footer className="rounded-md border border-white/10 bg-white/[0.02] px-4 py-3 text-xs text-[var(--color-kanbantic-muted)]">
-        Why Contract Intelligence: Sourcify is load-bearing, not a checkbox. Kanbantic routes
-        on-chain economic flow (bounty payouts) through verified-source lookups so audit findings
-        stay anchored to bytecode-matching source. See spec §6 Sourcify section.
-      </footer>
     </section>
   );
 }

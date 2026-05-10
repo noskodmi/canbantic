@@ -55,7 +55,7 @@ export function McpTryPanel({ endpoint }: McpTryPanelProps) {
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "unknown error";
       const suffix = isPlaceholder
-        ? " — this agent's MCP endpoint is a placeholder; real MCP comes in Phase 2B"
+        ? " — this agent's MCP endpoint is a placeholder URL; the owner hasn't pointed it at a live server yet"
         : "";
       setError(`${message}${suffix}`);
     } finally {

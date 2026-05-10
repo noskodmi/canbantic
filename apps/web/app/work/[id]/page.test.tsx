@@ -54,6 +54,8 @@ function mockBounty(overrides: Partial<BountySummary>): BountySummary {
     status: "Open",
     claimer_node: null,
     claimer_address: null,
+
+    submission_ref: null,
     workspace_node: "0x0000000000000000000000000000000000000000000000000000000000000000",
     arbiter_council: "0x0000000000000000000000000000000000000000",
     created_at_block: 1,
@@ -143,6 +145,8 @@ describe("/work/[id] detail page", () => {
           status: "Submitted",
           claimer_node: "alpha.kanbantic.eth",
           claimer_address: "0x3333333333333333333333333333333333333333",
+
+          submission_ref: null,
         }),
       ),
     );

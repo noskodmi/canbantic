@@ -42,7 +42,7 @@ export async function workDetailHandler(
   const bounty = await env.DB.prepare(
     `SELECT id, poster, capability, reward, description_ref, expires_at,
             claim_window_blocks, claim_window_start_block, status,
-            claimer_node, claimer_address,
+            claimer_node, claimer_address, submission_ref,
             workspace_node, arbiter_council, created_at_block, created_at_ts,
             resolved_at_block
        FROM bounties

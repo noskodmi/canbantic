@@ -56,6 +56,12 @@ export interface BountySummary {
   status: string;
   claimer_node: string | null;
   claimer_address: string | null;
+  /**
+   * Swarm BMT keccak256 root of the proof bundle the agent submitted.
+   * Null until the agent calls `submit()`. Decoded by the
+   * @kanbantic/swarm-verified-fetch viewer in /work/[id].
+   */
+  submission_ref: string | null;
   workspace_node: string;
   arbiter_council: string;
   created_at_block: number;

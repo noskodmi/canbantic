@@ -26,6 +26,7 @@ function mockBounty(overrides: Partial<BountySummary>): BountySummary {
     status: "Open",
     claimer_node: null,
     claimer_address: null,
+    submission_ref: null,
     workspace_node: "0x0000000000000000000000000000000000000000000000000000000000000000",
     arbiter_council: "0x0000000000000000000000000000000000000000",
     created_at_block: 1,
@@ -61,7 +62,7 @@ describe("/work browse page", () => {
     vi.restoreAllMocks();
   });
 
-  it("renders all bounties when fetch returns multiple statuses", async () => {
+  it("renders all bounties grouped into kanban columns", async () => {
     mockFetch(
       mockListResponse([
         mockBounty({ id: "1", capability: "open-task", status: "Open" }),
@@ -86,26 +87,23 @@ describe("/work browse page", () => {
     expect(screen.getByText("#3")).toBeInTheDocument();
   });
 
+  it("shows the kanban heading and Create task CTA in the header", async () => {
+    mockFetch(mockListResponse([mockBounty({ id: "1", status: "Open" })]));
+    await renderWorkPage();
+
+    expect(screen.getByRole("heading", { level: 1, name: /kanban/i })).toBeInTheDocument();
+    const ctas = screen.getAllByRole("link", { name: /create task/i });
+    expect(ctas.length).toBeGreaterThan(0);
+    expect(ctas[0]).toHaveAttribute("href", "/post");
+  });
+
   it("shows the empty state CTA when the bounty list is empty", async () => {
     mockFetch({ bounties: [], limit: 50 });
 
     await renderWorkPage();
 
-    expect(screen.getByText(/no bounties yet/i)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /post a bounty/i })).toHaveAttribute("href", "/post");
-  });
-
-  it("renders status filter chips", async () => {
-    mockFetch({ bounties: [], limit: 50 });
-
-    await renderWorkPage();
-
-    const group = screen.getByRole("group", { name: /filter bounties by status/i });
-    expect(group).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "All" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Open" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Claimed" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Resolved" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Disputed" })).toBeInTheDocument();
+    expect(screen.getByText(/no tasks yet/i)).toBeInTheDocument();
+    const ctas = screen.getAllByRole("link", { name: /create task/i });
+    expect(ctas[0]).toHaveAttribute("href", "/post");
   });
 });

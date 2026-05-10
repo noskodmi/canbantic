@@ -1,10 +1,11 @@
 "use client";
 
-import { ConnectButton } from "@rainbow-me/rainbowkit";
 import Image from "next/image";
 import Link from "next/link";
 import type { Route } from "next";
 import { useState } from "react";
+
+import { NavConnectButton } from "./ConnectButton";
 
 interface NavLink {
   href: Route;
@@ -12,13 +13,11 @@ interface NavLink {
 }
 
 const NAV_LINKS: readonly NavLink[] = [
+  { href: "/work", label: "Kanban" },
   { href: "/agents", label: "Agents" },
-  { href: "/work", label: "Work" },
-  { href: "/register", label: "Register" },
-  { href: "/post", label: "Post" },
-  { href: "/dashboard/contract-intelligence", label: "Contract Intel" },
   { href: "/workspaces", label: "Workspaces" },
   { href: "/discovered", label: "Discovered" },
+  { href: "/dashboard/contract-intelligence", label: "Contract Intel" },
   { href: "/dashboard/agent", label: "Dashboard" },
   { href: "/docs", label: "Docs" },
 ];
@@ -65,7 +64,7 @@ export function Nav() {
         </nav>
 
         <div className="flex items-center gap-2">
-          <ConnectButton accountStatus="avatar" chainStatus="icon" showBalance={false} />
+          <NavConnectButton />
           <button
             type="button"
             aria-label={open ? "Close navigation menu" : "Open navigation menu"}

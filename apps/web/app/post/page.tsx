@@ -187,16 +187,6 @@ export default function PostBountyPage() {
         </p>
       </header>
 
-      <div
-        role="note"
-        className="mb-6 rounded-md border border-yellow-500/30 bg-yellow-500/5 px-3 py-2 text-xs text-yellow-200/90"
-      >
-        Phase 2B will upload the description to Swarm via{" "}
-        <span className="font-mono">@kanbantic/swarm-verified-fetch</span>. For now,{" "}
-        <span className="font-mono">descriptionRef = keccak256(description)</span> — readers see the
-        hash, not the text.
-      </div>
-
       <form
         onSubmit={onSubmit}
         className="flex flex-col gap-6 rounded-lg border border-white/10 bg-white/[0.02] p-6"
