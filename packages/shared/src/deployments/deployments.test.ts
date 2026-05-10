@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { deploymentFor, sepoliaDeployment, UNDEPLOYED_PLACEHOLDER } from "./index.js";
+import {
+  deploymentFor,
+  isOffchainResolverDeployed,
+  sepoliaDeployment,
+  UNDEPLOYED_PLACEHOLDER,
+} from "./index.js";
 
 describe("sepoliaDeployment", () => {
   it("has chainId 11155111", () => {
@@ -21,6 +26,10 @@ describe("sepoliaDeployment", () => {
     expect(sepoliaDeployment.contracts.AgentVenture).toMatch(/^0x[0-9a-fA-F]{40}$/);
   });
 
+  it("has an OffchainResolver entry (zero-address placeholder until controller deploys it)", () => {
+    expect(sepoliaDeployment.contracts.OffchainResolver).toBe(UNDEPLOYED_PLACEHOLDER);
+  });
+
   it("UNDEPLOYED_PLACEHOLDER is the zero address", () => {
     expect(UNDEPLOYED_PLACEHOLDER).toBe("0x0000000000000000000000000000000000000000");
   });
@@ -36,6 +45,12 @@ describe("sepoliaDeployment", () => {
     expect(sepoliaDeployment.ens.rootNamehash).toBe(
       "0xb4c81d607382cd32c89297f9a8c9984b690260118843ad2961d043cb2ea948b7",
     );
+  });
+});
+
+describe("isOffchainResolverDeployed", () => {
+  it("is false while OffchainResolver address is the zero placeholder", () => {
+    expect(isOffchainResolverDeployed).toBe(false);
   });
 });
 

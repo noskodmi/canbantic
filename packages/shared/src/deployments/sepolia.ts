@@ -26,6 +26,12 @@ export const sepoliaDeployment = {
     ArbiterCouncil: "0x8B491130cc3Be0991824e4e6411B66B3066256c7" as Address,
     // Phase 7 / Sponsor 3 (Umia). Deployed + Sourcify-verified post-merge.
     AgentVenture: "0xFFE5Df1539AE16E81A11037b15c89061Ff183d6E" as Address,
+    // Wave 2 (ENS — Most Creative). Custom CCIP-Read OffchainResolver —
+    // once deployed, the controller swaps the resolver record on
+    // `kanbantic.eth` (and a wildcard child) so external ENS clients
+    // route reads through our worker. Placeholder until then;
+    // `isOffchainResolverDeployed` mirrors the AgentVenture pattern.
+    OffchainResolver: UNDEPLOYED_PLACEHOLDER,
   },
   ens: {
     rootName: "kanbantic.eth",

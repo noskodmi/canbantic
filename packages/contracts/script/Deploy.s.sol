@@ -8,6 +8,7 @@ import { BountyBoard } from "../src/BountyBoard.sol";
 import { ReputationAttestor } from "../src/ReputationAttestor.sol";
 import { ArbiterCouncil } from "../src/ArbiterCouncil.sol";
 import { AgentVenture } from "../src/AgentVenture.sol";
+import { OffchainResolver } from "../src/OffchainResolver.sol";
 
 /// @title Deploy
 /// @notice Deploys all 5 Phase 1A contracts in topological order and writes
@@ -17,6 +18,13 @@ import { AgentVenture } from "../src/AgentVenture.sol";
 ///             forge script script/Deploy.s.sol:Deploy \
 ///                 --rpc-url $RPC --broadcast --slow -vvv
 contract Deploy is Script {
+    /// @dev Default gateway URL when `CCIP_GATEWAY_URL` env is unset.
+    ///      EIP-3668 substitutes `{sender}` (the resolver address) and
+    ///      `{data}` (the abi-encoded `resolve(name,data)` calldata) into
+    ///      the URL on the client side before the GET / POST.
+    string internal constant DEFAULT_CCIP_GATEWAY_URL =
+        "https://kanbantic-api.lizzflix.workers.dev/api/ccip-read/{sender}/{data}.json";
+
     function run() external {
         uint256 pk = vm.envUint("DEPLOYER_PRIVATE_KEY");
         address deployer = vm.addr(pk);
@@ -57,6 +65,18 @@ contract Deploy is Script {
         AgentVenture agentVenture = new AgentVenture(agents, board, 0.005 ether);
         console2.log("AgentVenture:", address(agentVenture));
 
+        // Sponsor 4 / Wave 2 (ENS): OffchainResolver lets external ENS
+        // clients (viem, dig, app.ens.domains) resolve `*.kanbantic.eth`
+        // via Kanbantic's worker gateway over CCIP-Read. The signer
+        // address must match the EOA whose private key the worker holds
+        // in `CCIP_SIGNER_PRIVATE_KEY` (set via `wrangler secret put`).
+        string memory ccipGatewayUrl = vm.envOr("CCIP_GATEWAY_URL", DEFAULT_CCIP_GATEWAY_URL);
+        address ccipSigner = vm.envAddress("CCIP_SIGNER_ADDR");
+        OffchainResolver offchainResolver = new OffchainResolver(ccipGatewayUrl, ccipSigner);
+        console2.log("OffchainResolver:", address(offchainResolver));
+        console2.log("  url:", ccipGatewayUrl);
+        console2.log("  signer:", ccipSigner);
+
         vm.stopBroadcast();
 
         // Write canonical deployments record. Happens after vm.stopBroadcast
@@ -67,7 +87,9 @@ contract Deploy is Script {
         vm.serializeAddress(json, "AgentRegistry", address(agents));
         vm.serializeAddress(json, "ReputationAttestor", address(reputation));
         vm.serializeAddress(json, "ArbiterCouncil", address(council));
-        string memory finalJson = vm.serializeAddress(json, "AgentVenture", address(agentVenture));
+        vm.serializeAddress(json, "AgentVenture", address(agentVenture));
+        string memory finalJson =
+            vm.serializeAddress(json, "OffchainResolver", address(offchainResolver));
         vm.writeJson(finalJson, "deployments/sepolia.json");
     }
 }

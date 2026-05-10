@@ -14,6 +14,10 @@ export {
 } from "./ArbiterCouncil.js";
 export { BountyBoardAbi, type BountyBoardAbi as BountyBoardAbiType } from "./BountyBoard.js";
 export {
+  OffchainResolverAbi,
+  type OffchainResolverAbi as OffchainResolverAbiType,
+} from "./OffchainResolver.js";
+export {
   ReputationAttestorAbi,
   type ReputationAttestorAbi as ReputationAttestorAbiType,
 } from "./ReputationAttestor.js";

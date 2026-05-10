@@ -1,6 +1,15 @@
-import { sepoliaDeployment } from "./sepolia.js";
+import { sepoliaDeployment, UNDEPLOYED_PLACEHOLDER } from "./sepolia.js";
 
 export { sepoliaDeployment, type SepoliaDeployment, UNDEPLOYED_PLACEHOLDER } from "./sepolia.js";
+
+/**
+ * `true` once the controller deploys `OffchainResolver` to Sepolia and
+ * replaces the zero-address placeholder in `sepoliaDeployment`. Mirrors
+ * the AgentVenture pattern — web docs / CTAs gate on this so the UX
+ * degrades gracefully until the resolver address is real.
+ */
+export const isOffchainResolverDeployed: boolean =
+  sepoliaDeployment.contracts.OffchainResolver !== UNDEPLOYED_PLACEHOLDER;
 
 export const DEPLOYMENTS = {
   [sepoliaDeployment.chainId]: sepoliaDeployment,
