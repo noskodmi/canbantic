@@ -1,6 +1,7 @@
 import { applyMigrations } from "../db/migrate.js";
 import type { Env } from "../env.js";
 import { runOrbitportFinalizer } from "../orbitport/finalizer.js";
+import { runAutoClaimMatcher } from "../auto-claim.js";
 import { decode } from "./decode.js";
 import { handleAgentEvent } from "./handlers/agent.js";
 import { handleArbiterEvent } from "./handlers/arbiter.js";
@@ -53,6 +54,14 @@ export class IndexerCursor implements DurableObject {
     const lastBlock = cursorRow?.last_block ?? 0;
 
     if (lastBlock >= safeHead) {
+      // Even with no new blocks to index, run the auto-claim matcher
+      // so a freshly-posted bounty gets picked up while the indexer
+      // is caught up to the chain head.
+      try {
+        await runAutoClaimMatcher(this.env);
+      } catch (err) {
+        console.error("indexer: auto-claim matcher threw (cursor caught up)", err);
+      }
       await this.state.storage.setAlarm(Date.now() + ALARM_INTERVAL_MS);
       return { from: lastBlock + 1, to: safeHead, logs: 0 };
     }
@@ -107,6 +116,17 @@ export class IndexerCursor implements DurableObject {
       await runOrbitportFinalizer(this.env, this.env.DB, safeHead);
     } catch (err) {
       console.error("indexer: orbitport finalizer threw", err);
+    }
+
+    // Auto-claim matcher — scan for new Open bounties whose capability
+    // matches a deployer-custodian agent and fire the auto-run flow.
+    // Picks one bounty per tick to keep DO CPU bounded; the next tick
+    // catches the rest. Errors are swallowed for the same reason as
+    // Orbitport — the indexer must not depend on auto-claim health.
+    try {
+      await runAutoClaimMatcher(this.env);
+    } catch (err) {
+      console.error("indexer: auto-claim matcher threw", err);
     }
 
     await this.state.storage.setAlarm(Date.now() + ALARM_INTERVAL_MS);
