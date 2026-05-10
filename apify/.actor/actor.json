@@ -7,7 +7,7 @@
   "env": null,
   "input": "./INPUT_SCHEMA.json",
   "dockerfile": "./Dockerfile",
-  "readme": "./README.md",
+  "readme": "../README.md",
   "categories": ["developer-tools"],
   "meta": {
     "tags": ["mcp", "ens", "kanbantic"]
