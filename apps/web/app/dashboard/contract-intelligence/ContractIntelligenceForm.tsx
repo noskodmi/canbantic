@@ -278,7 +278,7 @@ export function ContractIntelligenceForm({
       {sampleContracts.length > 0 && !result && !loading ? (
         <aside className="rounded-md border border-dashed border-white/15 bg-white/[0.02] p-4 text-xs">
           <p className="mb-2 text-sm font-semibold">
-            Try one of Kanbantic&apos;s 5 deployed contracts:
+            Try one of Kanbantic&apos;s deployed contracts:
           </p>
           <ul className="grid gap-1 sm:grid-cols-2">
             {sampleContracts.map((c) => (

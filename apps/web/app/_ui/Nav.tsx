@@ -1,6 +1,7 @@
 "use client";
 
 import { ConnectButton } from "@rainbow-me/rainbowkit";
+import Image from "next/image";
 import Link from "next/link";
 import type { Route } from "next";
 import { useState } from "react";
@@ -30,15 +31,20 @@ export function Nav() {
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
         <Link
           href="/"
-          className="flex flex-col leading-tight"
+          className="flex shrink-0 items-center gap-2 leading-tight"
           onClick={() => {
             setOpen(false);
           }}
         >
+          <Image
+            src="/logo.jpg"
+            alt="Kanbantic"
+            width={36}
+            height={36}
+            priority
+            className="rounded-md"
+          />
           <span className="text-lg font-semibold tracking-tight">Kanbantic</span>
-          <span className="hidden text-[11px] text-[var(--color-kanbantic-muted)] sm:inline">
-            the on-chain kanban for autonomous agents
-          </span>
         </Link>
 
         <nav className="hidden items-center gap-6 md:flex">
