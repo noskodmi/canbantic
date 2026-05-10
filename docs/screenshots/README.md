@@ -1,40 +1,69 @@
-# Screenshots — Devfolio submission
+# Screenshots — autonomous-agent demo flow
 
-Drop the **5 captures** below into this directory before pasting the
-Devfolio form. The controller (you, manually) takes these — the
-worktree-bound agent doesn't render a browser.
+Captured during the live end-to-end run that drove `noskodmi.kanbantic.eth`
+past the **0.005 ETH Umia spin-out threshold** and minted the
+`AgentVenture` ERC-721 token. Every state shown below is real Sepolia
+on-chain state at the time of capture.
 
-All captures: **1920×1080**, dark mode, browser zoom 110%, DevTools
-closed, no notification popovers. See
-[`../recording-checklist.md`](../recording-checklist.md) for the full
-pre-shoot checklist.
+All screenshots: 1920×948 viewport, retina (2604×1896 PNG), dark mode,
+new SVG logo, no devtools / overlays.
 
-## The 5 captures
+## Capture sequence
 
-| #   | filename                              | dimensions | what it shows                                                                                                                                                                                            |
-| --- | ------------------------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | `home-hero.png`                       | 1920×1080  | Landing hero with the "on-chain kanban for autonomous agents" headline, the primary CTAs (Browse Agents / Post Work / View Status), and the live indexer-lag badge in the footer.                        |
-| 2   | `agents-browse.png`                   | 1920×1080  | `/agents` capability-filtered registry grid, with `noskodmi.kanbantic.eth` visible above the fold including its capability chips and reputation arc.                                                     |
-| 3   | `agent-profile-with-mcp.png`          | 1920×1080  | `/agents/noskodmi.kanbantic.eth` profile with the MCP try-panel showing a real `tools/list` JSON-RPC response from the worker MCP endpoint (round-trip < 1s).                                            |
-| 4   | `dashboard-contract-intelligence.png` | 1920×1080  | `/dashboard/contract-intelligence` after running an audit on the `BountyBoard` address — show the Sourcify v2 source-fetch confirmation, the rendered audit report, and the deep link to `sourcify.dev`. |
-| 5   | `umia-manifest.png`                   | 1920×1080  | `/dashboard/agent` Umia spin-out modal with the generated `umia apply --kanbantic-vid <id> --kanbantic-network sepolia …` CLI manifest, the `AgentVenture` tokenId, and the Swarm tokenURI evidence ref. |
+| #   | filename                             | what it shows                                                                                                                                                          |
+| --- | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 01  | `01-kanban-after-flow.png`           | `/work` kanban board with all four tasks docked into Open / Claimed / Submitted / Done columns. Task #4 (0.005 ETH research) just resolved.                            |
+| 02  | `02-work-detail-resolved.png`        | `/work/4` detail page header — capability, reward, full lifecycle timeline (`Posted → Claimed → Submitted → Resolved`), description fetched from Swarm.                |
+| 03  | `03-work-detail-proof.png`           | Same page scrolled to the Proof of Work section — Swarm BMT root pinned to chain, "payout has been released to the claimer" callout, Etherscan links.                  |
+| 04  | `04-agent-profile-noskodmi.png`      | `/agents/noskodmi` profile — ENS name, owner address, MCP endpoint pointing at the worker, reputation arc, MCP try-panel.                                              |
+| 05  | `05-dashboard-threshold-reached.png` | `/dashboard/agent` after the auto-flow: **4 bounties claimed, 0.0061 ETH settled revenue, "Umia threshold: Reached"**, primary "Spin out as Umia venture" CTA visible. |
+| 06  | `06-mint-agentventure-modal.png`     | The "Mint AgentVenture ERC-721 first" modal — explains the spin-out, points at the Kanbantic Agent Venture token + the `--kanbantic-vid` CLI flag.                     |
+| 07  | `07-umia-walkthrough-docs.png`       | `/docs/umia` — `AgentVenture` contract address with Sourcify badge, the full `umia apply` CLI manifest schema, the cross-chain rationale.                              |
 
-## Capture conventions
+## How the flow ran (for the presenter narration)
 
-- **Format:** PNG (lossless), sRGB, no embedded ICC profile mismatch.
-- **No annotations** — Devfolio renders captions separately; no
-  arrows or callouts on the image itself.
-- **Crop tightly** to the browser viewport; exclude the macOS title
-  bar / Dock / menu bar.
-- **Filename = lowercase-with-dashes** matching the table above —
-  these names are referenced verbatim in
-  `docs/devfolio-submission.md`.
+The demo is driven by four worker endpoints — none of them require the
+user to sign in the browser. Authority is "deployer-key custody on the
+worker side":
 
-## Order of operations
+```bash
+# 1. Post a task scoped to the public root, payable
+curl -X POST $API/api/agent/auto-post-bounty -d '{
+  "capability": "research",
+  "rewardWei": "5000000000000000",
+  "description": "Write a 200-word plain-English explainer of EIP-3668..."
+}'
+#   → tx 0x0c45…f4ee, bountyId 4
 
-1. Run the recording checklist's "Web app" section first so all five
-   surfaces are in a clean state.
-2. Capture in order 1 → 5; switch tabs/pages between captures to
-   avoid stale layout overlap.
-3. Drop the PNGs into this directory; commit them on a follow-up
-   branch (this branch ships the documentation scaffolding only).
+# 2. Claim + LLM + submit, all from the deployer-custodian agent
+curl -X POST $API/api/agent/auto-run -d '{
+  "agentNode": "0x1d0d…6676",
+  "bountyId":  4
+}'
+#   → claim tx 0xfd6f…8fab, submit tx 0xdd9e…ce4c, runDurationMs 8246
+
+# 3. Accept the proof + release reward (poster signs)
+curl -X POST $API/api/agent/auto-accept -d '{ "bountyId": 4 }'
+#   → tx 0xd431…1a27 — settles 0.005 ETH to noskodmi.kanbantic.eth,
+#     pushes total settled revenue to 0.0061 ETH > 0.005 threshold
+
+# 4. Mint AgentVenture ERC-721 for the eligible agent
+curl -X POST $API/api/agent/auto-mint-venture -d '{
+  "agentNode": "0x1d0d…6676"
+}'
+#   → tx 0x2c0e…9ae1, AgentVenture tokenId 1
+```
+
+End-to-end real-time: ~25 seconds (bounded by Sepolia confirmation
+blocks). Every state surfaces in the UI within one indexer alarm tick
+(~5s) so the presenter can refresh `/work` / `/dashboard/agent`
+between curls and watch the rows update.
+
+## Sponsor-track relevance
+
+- **Umia** — the threshold-reached state + minted `AgentVenture` NFT
+  (capture 05 + 06) are the headline visual for the Umia track.
+- **ETHPrague Best UX** — captures 01, 02, 03 cover the four-step
+  task lifecycle in real Sepolia transactions, no demo mode.
+- **ENS / SpaceComputer / Sourcify / Apify / Swarm / X402** — see
+  `/docs` and per-track integration pages on the live site.
