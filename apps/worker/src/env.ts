@@ -19,10 +19,10 @@ export interface Env {
   CCIP_SIGNER_PRIVATE_KEY?: string;
   /** Optional override for the CCIP response TTL window in seconds (default 300). */
   CCIP_RESPONSE_TTL_SECONDS?: string;
-  /** Orbitport cTRNG endpoint. Default points at SpaceComputer's hosted draw endpoint. */
-  ORBITPORT_URL: string;
+  /** Orbitport cTRNG endpoint. Required for the finalizer; tests that don't exercise it may omit. */
+  ORBITPORT_URL?: string;
   /** Orbitport's pinned Ed25519 public key (32 bytes, hex, 0x-prefixed). */
-  ORBITPORT_PUBKEY: string;
+  ORBITPORT_PUBKEY?: string;
   /** Optional bearer token if Orbitport requires auth. Set via wrangler secret. */
   ORBITPORT_TOKEN?: string;
   /**
@@ -31,4 +31,10 @@ export interface Env {
    * default: log draw + skip tx so judges can hand-fire via cast/etherscan.
    */
   WORKER_DEPLOYER_PRIVATE_KEY?: string;
+  /**
+   * Address that receives X402 payments for paywalled endpoints. When
+   * unset (preview/dev) the worker falls back to the zero-address
+   * sentinel — production must set this via wrangler vars/secrets.
+   */
+  X402_PAY_TO_ADDRESS?: string;
 }

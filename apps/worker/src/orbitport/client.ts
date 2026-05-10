@@ -132,6 +132,11 @@ function pickField(obj: OrbitportResponse, ...names: (keyof OrbitportResponse)[]
  * @throws {OrbitportSignatureError} when the Ed25519 verification fails.
  */
 export async function fetchOrbitportDraw(env: Env): Promise<OrbitportDraw> {
+  if (!env.ORBITPORT_URL || !env.ORBITPORT_PUBKEY) {
+    throw new OrbitportError(
+      "ORBITPORT_URL / ORBITPORT_PUBKEY not configured — set in wrangler.jsonc vars",
+    );
+  }
   const headers: Record<string, string> = { accept: "application/json" };
   const token = env.ORBITPORT_TOKEN;
   if (token !== undefined && token.length > 0) {

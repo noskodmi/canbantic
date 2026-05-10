@@ -4,9 +4,11 @@
  * Contract Intelligence runner — client island.
  *
  * Form state lives entirely in the browser. On submit we POST the
- * chosen task + Sepolia address to the worker's
- * `/api/contract-intelligence/run` endpoint, then render the returned
- * markdown report inline.
+ * chosen task + Sepolia address through the X402 paywall helper
+ * (`payAndCall`) — the wallet sends 0.0001 ETH on Sepolia to the
+ * worker's payTo address, the worker verifies on-chain, and the
+ * audit/explain report is returned with the payment receipt tx hash
+ * in the `x-payment-receipt` header.
  *
  * "Recent audits" is in-memory only for v0.1 — when the worker grows
  * a `contract_intelligence_runs` table we'll swap this for a server
@@ -14,11 +16,16 @@
  * already what the persisted row will carry.
  */
 
+import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useState, type JSX, type SyntheticEvent } from "react";
+import { formatEther, type Hex } from "viem";
+import { useAccount, usePublicClient, useWalletClient } from "wagmi";
 
+import { X402Error, payAndCall } from "../../_lib/x402.js";
 import { Markdown } from "./Markdown.js";
 
 const API_BASE: string = process.env["NEXT_PUBLIC_KANBANTIC_API"] ?? "http://localhost:8787";
+const ETHERSCAN_TX = "https://sepolia.etherscan.io/tx";
 
 const TASK_KINDS = ["audit", "explain", "similarity"] as const;
 type TaskKind = (typeof TASK_KINDS)[number];
@@ -54,6 +61,16 @@ interface RecentRun {
   sourcifyMatch: SourcifyMatchView;
 }
 
+/**
+ * Per-call price the worker advertises in the 402 challenge. Hard-coded
+ * here for the pre-submit cost hint — the wallet still sends whatever
+ * `accept.amount` the live challenge carries, so a future price change
+ * server-side won't desync from the actual charge.
+ */
+const PRICE_WEI = 100_000_000_000_000n; // parseEther('0.0001')
+
+type PaymentPhase = "idle" | "submitting" | "confirming" | "complete";
+
 interface ContractIntelligenceFormProps {
   /** 5 Sepolia contracts the user can paste to try the demo. */
   sampleContracts: { name: string; address: string }[];
@@ -68,17 +85,46 @@ export function ContractIntelligenceForm({
   const [result, setResult] = useState<RunResponse | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [recent, setRecent] = useState<RecentRun[]>([]);
+  const [paymentPhase, setPaymentPhase] = useState<PaymentPhase>("idle");
+  const [paymentTxHash, setPaymentTxHash] = useState<Hex | null>(null);
+
+  const { isConnected } = useAccount();
+  const { data: walletClient } = useWalletClient();
+  const publicClient = usePublicClient();
 
   async function runRequest(submittedKind: TaskKind, submittedAddress: string): Promise<void> {
+    if (!walletClient || !publicClient) {
+      setSubmitError("Connect a wallet on Sepolia to pay for the audit.");
+      return;
+    }
+
     setLoading(true);
     setSubmitError(null);
     setResult(null);
+    setPaymentPhase("submitting");
+    setPaymentTxHash(null);
+
     try {
-      const response = await fetch(`${API_BASE}/api/contract-intelligence/run`, {
-        method: "POST",
-        headers: { "content-type": "application/json", accept: "application/json" },
-        body: JSON.stringify({ taskKind: submittedKind, address: submittedAddress }),
+      const response = await payAndCall(`${API_BASE}/api/contract-intelligence/run`, {
+        wallet: walletClient,
+        publicClient,
+        body: { taskKind: submittedKind, address: submittedAddress },
+        onPaymentSubmitted: (hash) => {
+          setPaymentTxHash(hash);
+          setPaymentPhase("confirming");
+        },
+        onConfirmation: (hash) => {
+          setPaymentTxHash(hash);
+          setPaymentPhase("complete");
+        },
       });
+
+      const receiptHash = response.headers.get("x-payment-receipt");
+      if (receiptHash && /^0x[a-fA-F0-9]{64}$/.test(receiptHash)) {
+        setPaymentTxHash(receiptHash as Hex);
+        setPaymentPhase("complete");
+      }
+
       const body = (await response.json()) as RunResponse;
       setResult(body);
       if (typeof body.error !== "string") {
@@ -91,7 +137,12 @@ export function ContractIntelligenceForm({
         setRecent((prev) => [recentEntry, ...prev].slice(0, 10));
       }
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : "Request failed");
+      setPaymentPhase("idle");
+      if (err instanceof X402Error) {
+        setSubmitError(err.message);
+      } else {
+        setSubmitError(err instanceof Error ? err.message : "Request failed");
+      }
     } finally {
       setLoading(false);
     }
@@ -105,10 +156,24 @@ export function ContractIntelligenceForm({
   function reset(): void {
     setResult(null);
     setSubmitError(null);
+    setPaymentPhase("idle");
+    setPaymentTxHash(null);
   }
+
+  const priceEth = formatEther(PRICE_WEI);
 
   return (
     <div className="flex flex-col gap-6">
+      {!isConnected ? (
+        <aside className="flex flex-col items-start gap-3 rounded-lg border border-yellow-500/30 bg-yellow-500/5 p-4 text-sm">
+          <p className="text-yellow-200/90">
+            Contract Intelligence is paywalled via X402 — connect a wallet on Sepolia to pay{" "}
+            <span className="font-mono">{priceEth} ETH</span> per audit.
+          </p>
+          <ConnectButton />
+        </aside>
+      ) : null}
+
       <form
         onSubmit={handleSubmit}
         className="flex flex-col gap-4 rounded-lg border border-white/10 bg-white/[0.02] p-4"
@@ -165,10 +230,15 @@ export function ContractIntelligenceForm({
           </div>
         </fieldset>
 
+        <p className="text-xs text-[var(--color-kanbantic-muted)]">
+          Cost: <span className="font-mono text-[var(--color-kanbantic-fg)]">{priceEth} ETH</span>{" "}
+          per audit (X402 paywall — server returns the work after a verified Sepolia payment).
+        </p>
+
         <div className="flex flex-wrap items-center gap-3">
           <button
             type="submit"
-            disabled={loading || address.trim().length === 0}
+            disabled={loading || address.trim().length === 0 || !isConnected}
             className="inline-flex items-center gap-2 rounded-md bg-[var(--color-kanbantic-accent)] px-4 py-2 text-sm font-semibold text-[var(--color-kanbantic-bg)] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading ? (
@@ -177,10 +247,14 @@ export function ContractIntelligenceForm({
                   aria-hidden="true"
                   className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent"
                 />
-                Running…
+                {paymentPhase === "submitting"
+                  ? "Sign payment in wallet…"
+                  : paymentPhase === "confirming"
+                    ? "Waiting for Sepolia confirmation… (~12s)"
+                    : "Running audit…"}
               </>
             ) : (
-              `Run ${TASK_LABEL[taskKind]}`
+              `Pay ${priceEth} ETH and run ${TASK_LABEL[taskKind]}`
             )}
           </button>
           {result || submitError ? (
@@ -224,7 +298,7 @@ export function ContractIntelligenceForm({
         </aside>
       ) : null}
 
-      {result ? <ResultCard result={result} /> : null}
+      {result ? <ResultCard result={result} paymentTxHash={paymentTxHash} /> : null}
 
       {recent.length > 0 ? (
         <section className="flex flex-col gap-2">
@@ -249,7 +323,13 @@ export function ContractIntelligenceForm({
   );
 }
 
-function ResultCard({ result }: { result: RunResponse }): JSX.Element {
+function ResultCard({
+  result,
+  paymentTxHash,
+}: {
+  result: RunResponse;
+  paymentTxHash: Hex | null;
+}): JSX.Element {
   if (result.error) {
     return (
       <section className="rounded-md border border-amber-500/30 bg-amber-500/10 p-4 text-sm">
@@ -278,7 +358,26 @@ function ResultCard({ result }: { result: RunResponse }): JSX.Element {
             {result.address}
           </span>
         ) : null}
+        {paymentTxHash ? (
+          <span className="rounded-full border border-cyan-500/30 bg-cyan-500/10 px-2 py-0.5 text-[11px] font-medium text-cyan-200">
+            X402 paid
+          </span>
+        ) : null}
       </header>
+
+      {paymentTxHash ? (
+        <p className="text-xs text-[var(--color-kanbantic-muted)]">
+          Audit complete — payment receipt:{" "}
+          <a
+            href={`${ETHERSCAN_TX}/${paymentTxHash}`}
+            target="_blank"
+            rel="noreferrer noopener"
+            className="break-all font-mono text-cyan-300 hover:underline"
+          >
+            {paymentTxHash} ↗
+          </a>
+        </p>
+      ) : null}
 
       {result.report ? (
         <article className="prose-invert max-w-none border-t border-white/10 pt-3">

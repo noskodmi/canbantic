@@ -19,12 +19,15 @@
     "SEPOLIA_CHAIN_ID": "11155111",
     "INDEXER_CHUNK_BLOCKS": "9500",
     // SpaceComputer Orbitport — public cTRNG endpoint + pinned Ed25519
-    // pubkey. The pubkey here is a placeholder — replace with the value
-    // SpaceComputer publishes for the production cTRNG service before
-    // any real fair-claim is finalized. The worker refuses any draw
-    // whose signature doesn't verify against this pubkey.
+    // pubkey. Pubkey here is placeholder; replace before any real
+    // fair-claim. Worker refuses any draw whose signature doesn't verify.
     "ORBITPORT_URL": "https://op-api.spacecomputer.io/api/v1/services/trng",
-    "ORBITPORT_PUBKEY": "0x0000000000000000000000000000000000000000000000000000000000000000"
+    "ORBITPORT_PUBKEY": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    // X402 paywall pay-to. This is the test value the worker test suite
+    // pins. Production overrides via `wrangler secret put X402_PAY_TO_ADDRESS`
+    // (or by editing this file before deploy) — typically the deployer
+    // address `0x44C176989d16f5c2A846CF59d4CF68AF1006ddDe`.
+    "X402_PAY_TO_ADDRESS": "0x000000000000000000000000000000000000bEEF"
   },
   "d1_databases": [
     {
