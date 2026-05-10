@@ -3,20 +3,18 @@
  *
  * Body: { taskKind: 'audit' | 'explain' | 'similarity', address: '0x...' }
  *
- * Pipeline (Phase 7 v0.1):
+ * Pipeline:
  *  1. Validate body shape (address regex, taskKind enum).
  *  2. For `similarity` — short-circuit with a not-implemented envelope.
  *  3. For `audit` / `explain` — fetch verified source from Sourcify v2
  *     via @kanbantic/sourcify-client.
  *  4. If unverified — return a `{ error: 'not_verified' }` envelope.
- *  5. Else — build a stubbed markdown report that quotes the first
- *     ~800 chars of the primary `.sol` source so judges can see the
- *     Sourcify pipeline is real. Real LLM call lands when
- *     `AI_GATEWAY_TOKEN` env is set (see `// TODO(ai-gateway)` below).
+ *  5. Call OpenRouter (claude-sonnet-4.5 by default) with the chosen
+ *     prompt template; fall back to a Sourcify-quoted stub if
+ *     OPENROUTER_API_KEY is unset.
  *
- * The stubbed branch is intentional — Sponsor 2's differentiator is
- * the *Sourcify routing*, not the LLM. The Vercel AI Gateway wire-up
- * is mechanical follow-up work once the token is provisioned.
+ * Sponsor 2's differentiator is the *Sourcify routing*: every report
+ * is anchored to bytecode-matching verified source.
  */
 
 import { lookup, type SourcifyMatch } from "@kanbantic/sourcify-client";
@@ -26,6 +24,9 @@ import type { Env } from "../env.js";
 const SEPOLIA_CHAIN_ID = 11155111;
 const ADDRESS_REGEX = /^0x[a-fA-F0-9]{40}$/;
 const SOURCE_PREVIEW_CHARS = 800;
+const LLM_SOURCE_BUDGET_CHARS = 12_000;
+const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
+const DEFAULT_MODEL = "anthropic/claude-sonnet-4.5";
 
 const TASK_KINDS = ["audit", "explain", "similarity"] as const;
 type TaskKind = (typeof TASK_KINDS)[number];
@@ -69,50 +70,139 @@ function pickPrimarySource(sources: Record<string, string>): { path: string; con
   return { path: first[0], content: first[1] };
 }
 
+function reportHeader(
+  taskKind: "audit" | "explain",
+  address: string,
+  match: SourcifyMatch,
+): string {
+  const matchLabel =
+    match.match === "exact_match"
+      ? "exact_match (bytecode + metadata)"
+      : "partial_match (bytecode only)";
+  const primary = pickPrimarySource(match.sources ?? {});
+  return (
+    `# Contract Intelligence — ${taskKind} report\n\n` +
+    `**Address:** \`${address}\` (Sepolia)\n` +
+    `**Sourcify match:** ${matchLabel}\n` +
+    `**Primary source:** \`${primary.path}\`\n\n`
+  );
+}
+
+function sourcePreviewBlock(match: SourcifyMatch): string {
+  const primary = pickPrimarySource(match.sources ?? {});
+  const preview = primary.content.slice(0, SOURCE_PREVIEW_CHARS);
+  return (
+    `## Verified source fetched\n\n` +
+    "```solidity\n" +
+    preview +
+    (primary.content.length > SOURCE_PREVIEW_CHARS ? "\n// …truncated…" : "") +
+    "\n```\n\n"
+  );
+}
+
 function buildStubReport(
   taskKind: "audit" | "explain",
   address: string,
   match: SourcifyMatch,
 ): string {
-  const sources = match.sources ?? {};
-  const primary = pickPrimarySource(sources);
-  const preview = primary.content.slice(0, SOURCE_PREVIEW_CHARS);
-  const matchLabel =
-    match.match === "exact_match"
-      ? "exact_match (bytecode + metadata)"
-      : "partial_match (bytecode only)";
-
-  const header =
-    `# Contract Intelligence — ${taskKind} report\n\n` +
-    `**Address:** \`${address}\` (Sepolia)\n` +
-    `**Sourcify match:** ${matchLabel}\n` +
-    `**Primary source:** \`${primary.path}\`\n\n`;
-
-  const sourceBlock =
-    `## Verified source fetched\n\n` +
-    "```solidity\n" +
-    preview +
-    (primary.content.length > SOURCE_PREVIEW_CHARS ? "\n// …truncated…" : "") +
-    "\n```\n\n";
-
-  // TODO(ai-gateway): when AI_GATEWAY_TOKEN env is set, replace this
-  // stub block with a real call to claude-sonnet-4-6 via the Vercel
-  // AI Gateway. Audit prompt asks for severity-labeled findings with
-  // line citations; explain prompt asks for a 3-paragraph
-  // non-developer summary.
   const stubFindings =
     taskKind === "audit"
       ? `## Findings (stub)\n\n` +
-        `Real audit lands when \`AI_GATEWAY_TOKEN\` env is set. ` +
+        `Real audit lands when \`OPENROUTER_API_KEY\` worker secret is set. ` +
         `The pipeline successfully fetched verified source from Sourcify.\n`
       : `## Explanation (stub)\n\n` +
-        `Real plain-English explanation lands when \`AI_GATEWAY_TOKEN\` env is set. ` +
+        `Real plain-English explanation lands when \`OPENROUTER_API_KEY\` worker secret is set. ` +
         `The pipeline successfully fetched verified source from Sourcify.\n`;
-
-  return header + sourceBlock + stubFindings;
+  return reportHeader(taskKind, address, match) + sourcePreviewBlock(match) + stubFindings;
 }
 
-export async function contractIntelligenceHandler(request: Request, _env: Env): Promise<Response> {
+function buildPrompt(taskKind: "audit" | "explain", address: string, match: SourcifyMatch): string {
+  const sources = match.sources ?? {};
+  const entries = Object.entries(sources)
+    .filter(([path]) => path.endsWith(".sol"))
+    .sort((a, b) => a[0].length - b[0].length);
+  let budget = LLM_SOURCE_BUDGET_CHARS;
+  const blocks: string[] = [];
+  for (const [path, content] of entries) {
+    if (budget <= 0) break;
+    const slice = content.slice(0, budget);
+    budget -= slice.length;
+    blocks.push(
+      `// FILE: ${path}\n${slice}${content.length > slice.length ? "\n// …truncated…" : ""}`,
+    );
+  }
+  const sourceBundle = blocks.join("\n\n");
+
+  if (taskKind === "audit") {
+    return (
+      `You are a Solidity security auditor reviewing a Sepolia contract at ${address}. ` +
+      `The source below is bytecode-verified by Sourcify (${match.match}). ` +
+      `Produce a concise audit report in markdown with sections: ` +
+      `Critical findings, Important findings, Minor findings, and a one-paragraph Overall assessment. ` +
+      `For each finding, cite the file and approximate line number, name the issue, and recommend a fix in 1-2 sentences. ` +
+      `If the contract is small and clean, say so plainly.\n\n` +
+      `=== VERIFIED SOURCE ===\n${sourceBundle}\n=== END SOURCE ===`
+    );
+  }
+
+  return (
+    `You are explaining a Sepolia smart contract at ${address} to a non-developer who is considering interacting with it. ` +
+    `The source below is bytecode-verified by Sourcify (${match.match}). ` +
+    `Write a 3-paragraph plain-English explanation in markdown: ` +
+    `(1) what this contract does in one paragraph, ` +
+    `(2) what risks the reader should know about in one paragraph, ` +
+    `(3) what actions the reader can take and what each costs / what each does.\n\n` +
+    `=== VERIFIED SOURCE ===\n${sourceBundle}\n=== END SOURCE ===`
+  );
+}
+
+interface OpenRouterResponse {
+  choices?: { message?: { content?: string } }[];
+  error?: { message?: string };
+}
+
+async function callOpenRouter(env: Env, prompt: string): Promise<string> {
+  const model = env.OPENROUTER_MODEL ?? DEFAULT_MODEL;
+  const res = await fetch(OPENROUTER_URL, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${env.OPENROUTER_API_KEY ?? ""}`,
+      "content-type": "application/json",
+      "http-referer": "https://kanbantic-api.lizzflix.workers.dev",
+      "x-title": "Kanbantic Contract Intelligence",
+    },
+    body: JSON.stringify({
+      model,
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 1500,
+    }),
+  });
+  if (!res.ok) {
+    throw new Error(`OpenRouter HTTP ${String(res.status)}: ${await res.text()}`);
+  }
+  const payload = await res.json<OpenRouterResponse>();
+  if (payload.error) {
+    throw new Error(`OpenRouter error: ${payload.error.message ?? "unknown"}`);
+  }
+  const content = payload.choices?.[0]?.message?.content;
+  if (typeof content !== "string" || content.length === 0) {
+    throw new Error("OpenRouter returned empty content");
+  }
+  return content;
+}
+
+async function buildLiveReport(
+  taskKind: "audit" | "explain",
+  address: string,
+  match: SourcifyMatch,
+  env: Env,
+): Promise<string> {
+  const prompt = buildPrompt(taskKind, address, match);
+  const llmBody = await callOpenRouter(env, prompt);
+  return reportHeader(taskKind, address, match) + sourcePreviewBlock(match) + llmBody + "\n";
+}
+
+export async function contractIntelligenceHandler(request: Request, env: Env): Promise<Response> {
   let raw: unknown;
   try {
     raw = await request.json();
@@ -164,13 +254,28 @@ export async function contractIntelligenceHandler(request: Request, _env: Env): 
     });
   }
 
-  const report = buildStubReport(taskKind, address, match);
+  let report: string;
+  let llmStatus: "openrouter" | "stub" | "openrouter_failed" = "stub";
+  if (env.OPENROUTER_API_KEY) {
+    try {
+      report = await buildLiveReport(taskKind, address, match, env);
+      llmStatus = "openrouter";
+    } catch (err) {
+      console.error("openrouter call failed, falling back to stub", err);
+      report = buildStubReport(taskKind, address, match);
+      llmStatus = "openrouter_failed";
+    }
+  } else {
+    report = buildStubReport(taskKind, address, match);
+  }
 
   return Response.json({
     kind: taskKind,
     address,
     sourcifyMatch: match.match,
     report,
+    llm: llmStatus,
+    model: llmStatus === "openrouter" ? (env.OPENROUTER_MODEL ?? DEFAULT_MODEL) : null,
     sourcifyUrl: `https://sourcify.dev/lookup/${address}`,
   });
 }

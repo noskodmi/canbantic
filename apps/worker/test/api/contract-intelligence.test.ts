@@ -86,7 +86,7 @@ describe("POST /api/contract-intelligence/run", () => {
     // see the Sourcify pipeline is real.
     expect(body.report).toContain("contract AgentRegistry");
     expect(body.report).toContain("## Findings (stub)");
-    expect(body.report).toContain("AI_GATEWAY_TOKEN");
+    expect(body.report).toContain("OPENROUTER_API_KEY");
   });
 
   it("explains a partial_match contract with a 3-paragraph stub", async () => {
