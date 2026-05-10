@@ -829,3 +829,283 @@ export async function agentAutoRunHandler(request: Request, env: Env): Promise<R
     runDurationMs: Date.now() - startedAt,
   });
 }
+
+/* ---------------------------------------------------------------------------
+ * Deployer-driven helpers for the full demo flow:
+ *   auto-post-bounty → auto-run → auto-accept → auto-mint-venture
+ *
+ * All four endpoints share the same authority model: gated only by the
+ * worker holding `WORKER_DEPLOYER_PRIVATE_KEY`. They exist so the
+ * presentation flow can be driven with curl from outside the browser.
+ * ---------------------------------------------------------------------------
+ */
+
+interface DeployerEnv {
+  env: Env;
+}
+
+async function getDeployer(env: Env) {
+  const pk = env.WORKER_DEPLOYER_PRIVATE_KEY;
+  if (pk === undefined || pk.length === 0) {
+    throw new Error("WORKER_DEPLOYER_PRIVATE_KEY not set");
+  }
+  const { createPublicClient, createWalletClient, defineChain, http } = await import("viem");
+  const { privateKeyToAccount } = await import("viem/accounts");
+  const account = privateKeyToAccount(pk as Hex);
+  const sepoliaChain = defineChain({
+    id: 11155111,
+    name: "Sepolia",
+    nativeCurrency: { name: "Sepolia Ether", symbol: "ETH", decimals: 18 },
+    rpcUrls: { default: { http: [env.SEPOLIA_RPC] } },
+  });
+  const transport = http(env.SEPOLIA_RPC);
+  const wallet = createWalletClient({ account, chain: sepoliaChain, transport });
+  const publicClient = createPublicClient({ chain: sepoliaChain, transport });
+  return { account, wallet, publicClient };
+}
+
+/**
+ * POST /api/agent/auto-post-bounty
+ *
+ * Body: { capability: string, rewardWei: string, description: string,
+ *         expiresInSeconds?: number }
+ *
+ * Uploads `description` to Swarm via the same pipeline /api/upload uses,
+ * then posts a BountyBoard.post tx from the deployer wallet with
+ * value = rewardWei. Defaults: expiresAt = now + 24h, claimWindow = 0,
+ * workspace = public root, arbiter = ArbiterCouncil.
+ */
+export async function agentAutoPostBountyHandler(request: Request, env: Env): Promise<Response> {
+  await applyMigrations(env.DB);
+
+  let raw: {
+    capability?: unknown;
+    rewardWei?: unknown;
+    description?: unknown;
+    expiresInSeconds?: unknown;
+  };
+  try {
+    raw = (await request.json());
+  } catch {
+    return Response.json({ error: "invalid_json" }, { status: 400 });
+  }
+  const capability = typeof raw.capability === "string" ? raw.capability.trim() : "";
+  const rewardStr = typeof raw.rewardWei === "string" ? raw.rewardWei.trim() : "";
+  const description = typeof raw.description === "string" ? raw.description : "";
+  const expiresIn =
+    typeof raw.expiresInSeconds === "number" && raw.expiresInSeconds > 0
+      ? raw.expiresInSeconds
+      : 24 * 60 * 60;
+
+  if (capability.length === 0 || rewardStr.length === 0 || description.length === 0) {
+    return Response.json(
+      { error: "invalid_request", message: "capability, rewardWei, description required." },
+      { status: 400 },
+    );
+  }
+  let rewardWei: bigint;
+  try {
+    rewardWei = BigInt(rewardStr);
+  } catch {
+    return Response.json(
+      { error: "invalid_request", message: "rewardWei must be a decimal-string bigint." },
+      { status: 400 },
+    );
+  }
+
+  const upload = await uploadBytes(env, new TextEncoder().encode(description));
+  const descriptionRef = upload.ref;
+
+  const { account, wallet, publicClient } = await getDeployer(env);
+  const { sepoliaDeployment, BountyBoardAbi } = await import("@kanbantic/shared");
+  const { encodeFunctionData, decodeEventLog } = await import("viem");
+  const expiresAt = BigInt(Math.floor(Date.now() / 1000) + expiresIn);
+
+  const data = encodeFunctionData({
+    abi: BountyBoardAbi,
+    functionName: "post",
+    args: [
+      capability,
+      rewardWei,
+      descriptionRef,
+      expiresAt,
+      0,
+      sepoliaDeployment.ens.rootNamehash,
+      sepoliaDeployment.contracts.ArbiterCouncil,
+    ],
+  });
+  const gas = await publicClient.estimateGas({
+    account,
+    to: sepoliaDeployment.contracts.BountyBoard,
+    data,
+    value: rewardWei,
+  });
+  const cappedGas = gas > 800_000n ? 800_000n : gas;
+  const txHash = await wallet.sendTransaction({
+    to: sepoliaDeployment.contracts.BountyBoard,
+    data,
+    value: rewardWei,
+    gas: cappedGas,
+  });
+  const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
+
+  let bountyId: string | null = null;
+  for (const log of receipt.logs) {
+    try {
+      const decoded = decodeEventLog({
+        abi: BountyBoardAbi,
+        data: log.data,
+        topics: log.topics,
+      });
+      if (decoded.eventName === "BountyPosted") {
+        const args = decoded.args as Record<string, unknown>;
+        const id = args["bountyId"];
+        if (typeof id === "bigint") bountyId = id.toString();
+      }
+    } catch {
+      // skip non-matching logs
+    }
+  }
+
+  return Response.json({
+    txHash,
+    bountyId,
+    descriptionRef,
+    rewardWei: rewardWei.toString(),
+    capability,
+    poster: account.address,
+  });
+}
+
+/**
+ * POST /api/agent/auto-accept
+ * Body: { bountyId: number }
+ *
+ * Calls BountyBoard.accept(bountyId) from the deployer wallet. Reverts
+ * if msg.sender != poster — so the deployer must have been the poster
+ * (which is the case for auto-post-bounty).
+ */
+export async function agentAutoAcceptHandler(request: Request, env: Env): Promise<Response> {
+  let raw: { bountyId?: unknown };
+  try {
+    raw = (await request.json());
+  } catch {
+    return Response.json({ error: "invalid_json" }, { status: 400 });
+  }
+  const bountyId = typeof raw.bountyId === "number" ? raw.bountyId : NaN;
+  if (!Number.isInteger(bountyId) || bountyId < 0) {
+    return Response.json(
+      { error: "invalid_request", message: "bountyId must be a non-negative integer." },
+      { status: 400 },
+    );
+  }
+
+  const { account, wallet, publicClient } = await getDeployer(env);
+  const { sepoliaDeployment, BountyBoardAbi } = await import("@kanbantic/shared");
+  const { encodeFunctionData } = await import("viem");
+
+  const data = encodeFunctionData({
+    abi: BountyBoardAbi,
+    functionName: "accept",
+    args: [BigInt(bountyId)],
+  });
+  const gas = await publicClient.estimateGas({
+    account,
+    to: sepoliaDeployment.contracts.BountyBoard,
+    data,
+  });
+  const cappedGas = gas > 500_000n ? 500_000n : gas;
+  const txHash = await wallet.sendTransaction({
+    to: sepoliaDeployment.contracts.BountyBoard,
+    data,
+    gas: cappedGas,
+  });
+  await publicClient.waitForTransactionReceipt({ hash: txHash });
+  return Response.json({ txHash, bountyId, accepter: account.address });
+}
+
+/**
+ * POST /api/agent/auto-mint-venture
+ * Body: { agentNode: string, accruedRevenueRoot?: string, swarmTokenURI?: string }
+ *
+ * Calls AgentVenture.mint from the deployer wallet. Defaults
+ * accruedRevenueRoot to the bytes32 of the current settled-revenue
+ * sum (computed from D1) and swarmTokenURI to a placeholder.
+ */
+export async function agentAutoMintVentureHandler(request: Request, env: Env): Promise<Response> {
+  await applyMigrations(env.DB);
+
+  let raw: { agentNode?: unknown; accruedRevenueRoot?: unknown; swarmTokenURI?: unknown };
+  try {
+    raw = (await request.json());
+  } catch {
+    return Response.json({ error: "invalid_json" }, { status: 400 });
+  }
+  const agentNode = typeof raw.agentNode === "string" ? raw.agentNode.toLowerCase() : "";
+  if (!AGENT_NODE_REGEX.test(agentNode)) {
+    return Response.json(
+      { error: "invalid_request", message: "agentNode must be a 0x-prefixed 32-byte hex string." },
+      { status: 400 },
+    );
+  }
+  const accruedRevenueRoot =
+    typeof raw.accruedRevenueRoot === "string"
+      ? (raw.accruedRevenueRoot as `0x${string}`)
+      : (("0x" + "00".repeat(32)) as `0x${string}`);
+  const swarmTokenURI =
+    typeof raw.swarmTokenURI === "string" && raw.swarmTokenURI.length > 0
+      ? raw.swarmTokenURI
+      : "swarm://placeholder";
+
+  const { account, wallet, publicClient } = await getDeployer(env);
+  const { sepoliaDeployment, AgentVentureAbi } = await import("@kanbantic/shared");
+  const { encodeFunctionData, decodeEventLog } = await import("viem");
+
+  const data = encodeFunctionData({
+    abi: AgentVentureAbi,
+    functionName: "mint",
+    args: [agentNode as `0x${string}`, accruedRevenueRoot, swarmTokenURI],
+  });
+  const gas = await publicClient.estimateGas({
+    account,
+    to: sepoliaDeployment.contracts.AgentVenture,
+    data,
+  });
+  const cappedGas = gas > 800_000n ? 800_000n : gas;
+  const txHash = await wallet.sendTransaction({
+    to: sepoliaDeployment.contracts.AgentVenture,
+    data,
+    gas: cappedGas,
+  });
+  const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
+
+  let tokenId: string | null = null;
+  for (const log of receipt.logs) {
+    try {
+      const decoded = decodeEventLog({
+        abi: AgentVentureAbi,
+        data: log.data,
+        topics: log.topics,
+      });
+      if (decoded.eventName === "AgentVentureMinted" || decoded.eventName === "Transfer") {
+        const args = decoded.args as Record<string, unknown>;
+        const id = args["tokenId"];
+        if (typeof id === "bigint") tokenId = id.toString();
+      }
+    } catch {
+      // skip
+    }
+  }
+
+  return Response.json({
+    txHash,
+    tokenId,
+    agentNode,
+    accruedRevenueRoot,
+    swarmTokenURI,
+    minter: account.address,
+  });
+}
+
+// Keep the helper referenced in case future endpoints want it.
+export type { DeployerEnv };

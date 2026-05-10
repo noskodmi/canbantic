@@ -1,7 +1,13 @@
 import { type Address, parseEther } from "viem";
 
 import { agentDetailHandler } from "./api/agent-detail.js";
-import { agentAutoRunHandler, agentRunHandler } from "./api/agent-run.js";
+import {
+  agentAutoAcceptHandler,
+  agentAutoMintVentureHandler,
+  agentAutoPostBountyHandler,
+  agentAutoRunHandler,
+  agentRunHandler,
+} from "./api/agent-run.js";
 import { agentsHandler } from "./api/agents.js";
 import { apifyWebhookHandler } from "./api/apify-webhook.js";
 import { ccipReadHandler } from "./api/ccip-read.js";
@@ -117,6 +123,17 @@ router.add({ method: "POST", path: "/api/upload", handler: uploadHandler });
 router.add({ method: "GET", path: "/api/swarm/:ref", handler: swarmReadHandler });
 router.add({ method: "POST", path: "/api/agent/run", handler: agentRunHandler });
 router.add({ method: "POST", path: "/api/agent/auto-run", handler: agentAutoRunHandler });
+router.add({
+  method: "POST",
+  path: "/api/agent/auto-post-bounty",
+  handler: agentAutoPostBountyHandler,
+});
+router.add({ method: "POST", path: "/api/agent/auto-accept", handler: agentAutoAcceptHandler });
+router.add({
+  method: "POST",
+  path: "/api/agent/auto-mint-venture",
+  handler: agentAutoMintVentureHandler,
+});
 
 export default {
   async fetch(request, env, ctx) {
