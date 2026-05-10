@@ -21,10 +21,33 @@ export interface Env {
   CCIP_RESPONSE_TTL_SECONDS?: string;
   /** Orbitport cTRNG endpoint. Required for the finalizer; tests that don't exercise it may omit. */
   ORBITPORT_URL?: string;
-  /** Orbitport's pinned Ed25519 public key (32 bytes, hex, 0x-prefixed). */
+  /**
+   * Orbitport's pinned Ed25519 public key (32 bytes, hex, 0x-prefixed).
+   * Optional — when the API tier returns unsigned `{src:"derived"}` draws
+   * (the OAuth client-credentials tier does), the OAuth bearer is the
+   * trust anchor and pubkey verification is skipped.
+   */
   ORBITPORT_PUBKEY?: string;
-  /** Optional bearer token if Orbitport requires auth. Set via wrangler secret. */
+  /**
+   * Optional bearer token. Either set this directly or set the OAuth
+   * pair below and the client mints + caches one for you.
+   */
   ORBITPORT_TOKEN?: string;
+  /**
+   * Auth0 token endpoint for SpaceComputer (defaults to
+   * https://auth.spacecomputer.io/oauth/token when unset).
+   */
+  ORBITPORT_TOKEN_URL?: string;
+  /**
+   * Auth0 audience required for OAuth client-credentials (defaults to
+   * https://op.spacecomputer.io/api when unset — the value verified
+   * against the live API).
+   */
+  ORBITPORT_AUDIENCE?: string;
+  /** Orbitport OAuth client_id. Set via `wrangler secret put`. */
+  ORBITPORT_CLIENT_ID?: string;
+  /** Orbitport OAuth client_secret. Set via `wrangler secret put`. */
+  ORBITPORT_CLIENT_SECRET?: string;
   /**
    * Hex private key for the worker's deployer wallet. When set, Orbitport
    * finalizer submits `BountyBoard.finalizeFairClaim` directly. Unset

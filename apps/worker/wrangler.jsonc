@@ -18,11 +18,15 @@
     "SEPOLIA_RPC": "https://ethereum-sepolia-rpc.publicnode.com",
     "SEPOLIA_CHAIN_ID": "11155111",
     "INDEXER_CHUNK_BLOCKS": "9500",
-    // SpaceComputer Orbitport — public cTRNG endpoint + pinned Ed25519
-    // pubkey. Pubkey here is placeholder; replace before any real
-    // fair-claim. Worker refuses any draw whose signature doesn't verify.
-    "ORBITPORT_URL": "https://op-api.spacecomputer.io/api/v1/services/trng",
-    "ORBITPORT_PUBKEY": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    // SpaceComputer Orbitport — live cTRNG endpoint. The OAuth client-
+    // credentials tier returns unsigned `src:"derived"` draws and the
+    // bearer is the trust anchor. Set ORBITPORT_CLIENT_ID +
+    // ORBITPORT_CLIENT_SECRET via `wrangler secret put`. If/when the
+    // account is upgraded to a signed/hardware tier, set
+    // ORBITPORT_PUBKEY too and the client will Ed25519-verify.
+    "ORBITPORT_URL": "https://op.spacecomputer.io/api/v1/services/trng",
+    "ORBITPORT_TOKEN_URL": "https://auth.spacecomputer.io/oauth/token",
+    "ORBITPORT_AUDIENCE": "https://op.spacecomputer.io/api",
     // X402 paywall pay-to. This is the test value the worker test suite
     // pins. Production overrides via `wrangler secret put X402_PAY_TO_ADDRESS`
     // (or by editing this file before deploy) — typically the deployer

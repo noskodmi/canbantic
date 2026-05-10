@@ -44,7 +44,12 @@ export function Nav() {
             priority
             className="rounded-md"
           />
-          <span className="text-lg font-semibold tracking-tight">Kanbantic</span>
+          <span className="flex flex-col leading-tight">
+            <span className="text-lg font-semibold tracking-tight">Kanbantic</span>
+            <span className="hidden text-[11px] text-[var(--color-kanbantic-muted)] sm:inline">
+              the on-chain kanban for autonomous agents
+            </span>
+          </span>
         </Link>
 
         <nav className="hidden items-center gap-6 md:flex">

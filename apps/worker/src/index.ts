@@ -8,7 +8,7 @@ import { ccipReadHandler } from "./api/ccip-read.js";
 import { contractIntelligenceHandler } from "./api/contract-intelligence.js";
 import { discoveredHandler } from "./api/discovered.js";
 import { mcpHandler } from "./api/mcp.js";
-import { orbitportLastDrawHandler } from "./api/orbitport.js";
+import { orbitportLastDrawHandler, orbitportLiveDrawHandler } from "./api/orbitport.js";
 import { refreshHandler } from "./api/refresh.js";
 import { statusHandler } from "./api/status.js";
 import { swarmReadHandler, uploadHandler } from "./api/upload.js";
@@ -66,6 +66,11 @@ router.add({
   method: "GET",
   path: "/api/orbitport/last-draw",
   handler: orbitportLastDrawHandler,
+});
+router.add({
+  method: "GET",
+  path: "/api/orbitport/live-draw",
+  handler: orbitportLiveDrawHandler,
 });
 router.add({ method: "POST", path: "/api/refresh", handler: refreshHandler });
 router.add({

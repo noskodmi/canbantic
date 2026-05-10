@@ -13,6 +13,10 @@ function bytesToHex(bytes: Uint8Array): string {
   return out;
 }
 
+function stripHexFix(s: string): string {
+  return s.startsWith("0x") || s.startsWith("0X") ? s.slice(2) : s;
+}
+
 // Deterministic 32-byte seed → fixed Ed25519 keypair so the test is
 // reproducible. Numbers chosen to be non-zero / non-identity to avoid
 // any zero-special edge cases.
@@ -166,6 +170,35 @@ describe("fetchOrbitportDraw", () => {
     );
 
     await expect(fetchOrbitportDraw(BASE_ENV)).rejects.toBeInstanceOf(OrbitportError);
+  });
+
+  it("accepts the live derived-tier shape `{service, src, data:hex}` without signature", async () => {
+    // Variant C: SpaceComputer's OAuth client-credentials tier. The
+    // bearer is the trust anchor — no Ed25519 signature is provided,
+    // so the client must return a zeroed signature + pubkey rather
+    // than throwing.
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve(
+          jsonResponse({
+            service: "trng",
+            src: "derived",
+            data: stripHexFix(DRAW_HEX),
+          }),
+        ),
+      ),
+    );
+
+    const result = await fetchOrbitportDraw({
+      ...BASE_ENV,
+      ORBITPORT_TOKEN: "static-bearer",
+    });
+    expect(result.draw.length).toBe(32);
+    expect(Array.from(result.draw)).toEqual(Array.from(DRAW));
+    // Sentinel zero values when the response is unsigned.
+    expect(result.signature.every((b) => b === 0)).toBe(true);
+    expect(result.publicKey.every((b) => b === 0)).toBe(true);
   });
 
   it("forwards the bearer token when ORBITPORT_TOKEN is set", async () => {
