@@ -8,7 +8,12 @@
  * caching at the platform layer — clients never call the worker directly.
  */
 
-import type { AgentListResponse, AgentSummary, BountyListResponse } from "@kanbantic/shared";
+import type {
+  AgentListResponse,
+  AgentSummary,
+  BountyListResponse,
+  OrbitportLastDrawResponse,
+} from "@kanbantic/shared";
 
 export const API_BASE: string = process.env["NEXT_PUBLIC_KANBANTIC_API"] ?? "http://localhost:8787";
 
@@ -42,4 +47,10 @@ export async function getAgentByLabel(label: string): Promise<AgentSummary | und
 
 export async function getWork(limit = 50): Promise<BountyListResponse> {
   return getJson<BountyListResponse>(`/api/work?limit=${String(limit)}`);
+}
+
+export async function getOrbitportLastDraw(): Promise<OrbitportLastDrawResponse> {
+  // Short revalidate — judges hitting refresh during a fair-claim
+  // demo expect the latest draw within seconds.
+  return getJson<OrbitportLastDrawResponse>("/api/orbitport/last-draw", { revalidate: 5 });
 }

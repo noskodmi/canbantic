@@ -1,5 +1,6 @@
 import { applyMigrations } from "../db/migrate.js";
 import type { Env } from "../env.js";
+import { runOrbitportFinalizer } from "../orbitport/finalizer.js";
 import { decode } from "./decode.js";
 import { handleAgentEvent } from "./handlers/agent.js";
 import { handleArbiterEvent } from "./handlers/arbiter.js";
@@ -97,6 +98,16 @@ export class IndexerCursor implements DurableObject {
     )
       .bind(chainId, safeHead)
       .run();
+
+    // Orbitport finalizer — runs after the cursor advances so we only act
+    // on bounties whose claim window is closed at the indexed safeHead.
+    // Errors are swallowed: the indexer's correctness must not depend on
+    // Orbitport availability.
+    try {
+      await runOrbitportFinalizer(this.env, this.env.DB, safeHead);
+    } catch (err) {
+      console.error("indexer: orbitport finalizer threw", err);
+    }
 
     await this.state.storage.setAlarm(Date.now() + ALARM_INTERVAL_MS);
     return { from, to: safeHead, logs: logs.length };

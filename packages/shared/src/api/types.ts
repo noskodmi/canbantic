@@ -45,6 +45,14 @@ export interface BountySummary {
   description_ref: string;
   expires_at: number;
   claim_window_blocks: number;
+  /**
+   * Block at which the commit window opened. Together with
+   * `claim_window_blocks` this lets the UI show whether the window
+   * has closed, even before the indexer picks up `BountyClaimFinalized`.
+   * Always present on read but typed as nullable to keep older snapshots
+   * (pre-Phase 7) deserializing cleanly.
+   */
+  claim_window_start_block: number | null;
   status: string;
   claimer_node: string | null;
   claimer_address: string | null;
@@ -58,4 +66,25 @@ export interface BountySummary {
 export interface BountyListResponse {
   bounties: BountySummary[];
   limit: number;
+}
+
+/**
+ * SpaceComputer Orbitport cTRNG draw — what the worker stores in
+ * `orbitport_draws` and what `/api/orbitport/last-draw` returns under
+ * `last`. Hex strings are 0x-prefixed lowercase. `used_for_bounty_id` is
+ * non-null only after the worker submits a `finalizeFairClaim` tx using
+ * this draw.
+ */
+export interface OrbitportDrawSummary {
+  id: number;
+  draw_hex: string;
+  signature_hex: string;
+  pubkey_hex: string;
+  /** Unix seconds. */
+  ts: number;
+  used_for_bounty_id: number | null;
+}
+
+export interface OrbitportLastDrawResponse {
+  last: OrbitportDrawSummary | null;
 }

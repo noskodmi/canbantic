@@ -11,7 +11,8 @@ export async function workHandler(request: Request, env: Env): Promise<Response>
 
   const result = await env.DB.prepare(
     `SELECT id, poster, capability, reward, description_ref, expires_at,
-            claim_window_blocks, status, claimer_node, claimer_address,
+            claim_window_blocks, claim_window_start_block, status,
+            claimer_node, claimer_address,
             workspace_node, arbiter_council, created_at_block, created_at_ts,
             resolved_at_block
        FROM bounties
